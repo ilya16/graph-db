@@ -1,9 +1,12 @@
+from typing import List
+
+from .property import Property
 from .node import Node
 
 
 class Relationship:
     """ Define a single edge"""
-    properties = []
+    properties: List[Property] = []
 
     def __init__(self, type: str, start_node: Node, end_node: Node):
         self.type = type
@@ -28,15 +31,14 @@ class Relationship:
     def get_type(self) -> str:
         return self.type
 
-    def add_property(self, key, value):
-        prop = {key: value}
+    def add_property(self, prop: Property):
         self.properties.append(prop)
 
     def get_edge_property_value(self, key):
-        if any(key in d for d in self.properties):
+        if any(key in d.key for d in self.properties):
             for prop in self.properties:
                 try:
-                    return prop[key]
+                    return prop.key
                 except KeyError:
                     continue
         else:

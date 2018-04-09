@@ -1,7 +1,8 @@
+from typing import Dict
+
 from graph_db.engine.types import *
 from .graph_storage import NodeStorage, RelationshipStorage
 from .record import Record
-from .record_storage import RecordStorage
 
 
 class WorkerConfig:
@@ -47,7 +48,7 @@ class WorkerFSManager:
     #     for storage_type in config.storage_paths:
     #         self.stores[storage_type.__qualname__] = storage_type.__init__(config.storage_paths[storage_type])
 
-    def update_stats(self) -> {RecordStorage: int}:
+    def update_stats(self) -> Dict[str, int]:
         """
         Updates total number of records in each connected storage.
         :return:        dictionary with stats
@@ -57,7 +58,7 @@ class WorkerFSManager:
             self.stats[storage_type] = self.stores[storage_type].count_records()
         return self.stats
 
-    def get_stats(self) -> {RecordStorage: int}:
+    def get_stats(self) -> Dict[str, int]:
         """
         Returns total number of records in each connected storage.
         :return:        dictionary with stats
@@ -92,3 +93,5 @@ class WorkerFSManager:
             raise e
 
         return node_record
+
+    # TODO: methods for relationships, properties, labels...

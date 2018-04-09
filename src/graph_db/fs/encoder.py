@@ -1,5 +1,8 @@
+from typing import Dict
+
 from graph_db.engine.label import Label
 from graph_db.engine.node import Node
+from graph_db.engine.relationship import Relationship
 from graph_db.engine.types import *
 from .record import Record
 
@@ -39,4 +42,22 @@ class RecordEncoder:
 
         record = Record(node_bytes, node.id)
 
+        assert record.size == NODE_RECORD_SIZE
+
         return record
+
+    @staticmethod
+    def encode_relationship(rel: Relationship) -> Record:
+        pass
+
+    @staticmethod
+    def encode_label(label: Label) -> Record:
+        pass
+
+    @staticmethod
+    def encode_property(prop: Dict[object, object]) -> Record:
+        pass
+
+    @staticmethod
+    def encode_dynamic_data(record: object) -> Record:
+        pass

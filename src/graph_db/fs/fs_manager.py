@@ -1,11 +1,14 @@
+from typing import Dict
+
 from graph_db.engine.label import Label
 from graph_db.engine.node import Node
+from graph_db.engine.property import Property
+from graph_db.engine.relationship import Relationship
 from graph_db.engine.types import *
 from .decoder import RecordDecoder
 from .encoder import RecordEncoder
 from .graph_storage import NodeStorage, RelationshipStorage
-from .record_storage import RecordStorage
-from .worker import WorkerFSManager, WorkerConfig
+from .worker import WorkerFSManager
 
 
 # TODO: distribution of data across different workers based on ids
@@ -35,7 +38,7 @@ class DBFSManager:
 
         self.update_stats()
 
-    def update_stats(self) -> {RecordStorage: int}:
+    def update_stats(self) -> Dict[str, int]:
         """
         Collects a sum of total number of records in each connected storage.
         :return:        dictionary with stats
@@ -50,7 +53,7 @@ class DBFSManager:
 
         return self.stats
 
-    def get_stats(self) -> {RecordStorage: int}:
+    def get_stats(self) -> Dict[str, int]:
         """
         Returns total number of records in each connected storage.
         :return:        dictionary with stats
@@ -87,3 +90,28 @@ class DBFSManager:
             node = None
 
         return node
+
+    # TODO: implement
+
+    def update_node(self, node: Node):
+        pass
+
+    def insert_relationship(self, rel: Relationship):
+        pass
+
+    def select_relationship(self, rel_id: int) -> Relationship:
+        pass
+
+    def update_relationship(self, rel: Relationship):
+        pass
+
+    def insert_property(self, prop: Property):
+        pass
+
+    def select_property(self, prop_id: int) -> Property:
+        pass
+
+    def update_property(self, prop: Property):
+        pass
+
+    # also dynamic objects

@@ -4,6 +4,7 @@ import errno
 
 from graph_db.engine.types import MEMORY
 
+
 def open_db(path: str, record_size: int) -> io.BufferedIOBase:
     if path.startswith(MEMORY):
         return io.BytesIO()

@@ -32,15 +32,14 @@ class Node:
     def set_label(self, label: Label):
         self.label = label
 
-    def add_property(self, key: object, value: object):
-        prop = {key: value}
+    def add_property(self, prop):
         self.properties.append(prop)
 
     def get_property_value(self, key: object) -> object:
-        if any(key in d for d in self.properties):
+        if any(key in d.key for d in self.properties):
             for prop in self.properties:
                 try:
-                    return prop[key]
+                    return prop.key
                 except KeyError:
                     continue
         else:
