@@ -5,10 +5,11 @@ from graph_db.engine.node import Node
 from graph_db.engine.property import Property
 from graph_db.engine.relationship import Relationship
 from graph_db.engine.types import *
+from graph_db.fs.record import Record
 from .decoder import RecordDecoder
 from .encoder import RecordEncoder
 from .graph_storage import NodeStorage, RelationshipStorage
-from .worker import WorkerFSManager
+from .worker import Worker
 
 
 # TODO: distribution of data across different workers based on ids
@@ -28,7 +29,7 @@ class DBFSManager:
         self.stores = {}
         self.stats = {}
 
-    def add_worker(self, worker: WorkerFSManager):
+    def add_worker(self, worker: Worker):
         self.workers.append(worker)
         for storage_type in worker.stores:
             if storage_type in self.stores:
@@ -60,21 +61,21 @@ class DBFSManager:
         """
         return self.stats
 
-    def insert_node(self, node: Node):
+    def write_node_record(self, node_record: Record):
         """
         Prepares node records and select appropriate node storage.
-        :param node:    node object
+        :param node_record:    node record object
         """
         # TODO: insert label, properties first
         worker = self.workers[0]     # one local worker with storage
 
-        node.set_id(self.stats[NodeStorage.__qualname__])
-        node_record = RecordEncoder.encode_node(node)
+        node_record.set_index(self.stats[NodeStorage.__qualname__])
+        worker.write_node_record(node_record)
 
-        worker.write_node(node_record)
+        # if ok:
         self.stats[NodeStorage.__qualname__] += 1
 
-    def select_node(self, node_id: int):
+    def read_node_record(self, node_id: int):
         """
         Selects node with `id` from the appropriate storage.
         :return:
@@ -82,18 +83,20 @@ class DBFSManager:
         worker = self.workers[0]    # one local worker with storage
 
         try:
-            node_record = worker.read_node(node_id)
-            node = RecordDecoder.decode_node(node_record)
+            node_record = worker.read_node_record(node_id)
         except AssertionError as e:
             print(f'Error at Worker #0: {e}')
             # should be rethrown
-            node = None
+            node_record = None
 
-        return node
+        return node_record
 
-    # TODO: implement
+    # TODO: rename & implement
 
-    def update_node(self, node: Node):
+    def read_label_record(self, label_id):
+        pass
+
+    def update_node_record(self, node: Node):
         pass
 
     def insert_relationship(self, rel: Relationship):
@@ -113,5 +116,3 @@ class DBFSManager:
 
     def update_property(self, prop: Property):
         pass
-
-    # also dynamic objects

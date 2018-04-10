@@ -35,16 +35,5 @@ class Record(bytearray):
 
         self[offset:offset + len(data)] = data
 
-    # def get_pointer(self, index: int) -> int:
-    #     assert 0 <= index < POINTERS_PER_BLOCK
-    #
-    #     binary = self[index * POINTER_SIZE:(index + 1) * POINTER_SIZE]
-    #     pointer = int.from_bytes(binary, byteorder=BYTEORDER)
-    #
-    #     return pointer
-    #
-    # def set_pointer(self, index: int, pointer: int) -> None:
-    #     assert 0 <= index < POINTERS_PER_BLOCK
-    #
-    #     binary = pointer.to_bytes(POINTER_SIZE, byteorder=BYTEORDER)
-    #     self.override(index * POINTER_SIZE, binary)
+    def set_index(self, index: int):
+        self.idx = index

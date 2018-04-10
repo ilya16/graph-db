@@ -27,7 +27,7 @@ class WorkerConfig:
         pass
 
 
-class WorkerFSManager:
+class Worker:
     """
     Worker Machine File System manager.
     Manages distribution of a portion of database across several stores.
@@ -65,7 +65,7 @@ class WorkerFSManager:
         """
         return self.stats
 
-    def write_node(self, node_record: Record):
+    def write_node_record(self, node_record: Record):
         """
         Writes new node data to node storage.
         :param node_record:    node record object
@@ -73,12 +73,14 @@ class WorkerFSManager:
         node_storage = self.stores[NodeStorage.__qualname__]
         node_storage.allocate_record()
 
-        node_record.idx -= node_storage.offset
+        # node_record.idx -= node_storage.offset
+        node_record.set_index(self.stats[NodeStorage.__qualname__])
         node_storage.write_record(node_record)
 
+        # if ok:
         self.stats[NodeStorage.__qualname__] += 1
 
-    def read_node(self, node_id: int):
+    def read_node_record(self, node_id: int):
         """
         Reads node record with `node_id` from node storage.
         :param node_id:     node id
@@ -87,7 +89,7 @@ class WorkerFSManager:
 
         try:
             node_record = node_storage.read_record(node_id - node_storage.offset)
-            node_record.idx += node_storage.offset
+            # node_record.idx += node_storage.offset
         except AssertionError as e:
             print(f'Error: {e}')
             raise e
