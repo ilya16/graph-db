@@ -1,7 +1,7 @@
 from typing import Dict
 
 from graph_db.engine.types import *
-from .graph_storage import NodeStorage, RelationshipStorage
+from .graph_storage import NodeStorage, RelationshipStorage, PropertyStorage, LabelStorage, DynamicStorage
 from .record import Record
 
 
@@ -37,9 +37,11 @@ class Worker:
         self.stores = dict()
 
         # self._init_from_config(config)
-        self.stores[NodeStorage.__qualname__] = NodeStorage(path=base_path + NODE_STORAGE)
-        self.stores[RelationshipStorage.__qualname__] = RelationshipStorage(path=base_path + RELATIONSHIP_STORAGE)
-        # self.stores[PropertyStorage.__qualname__] = RelationshipStorage(path=base_path + PROPERTY_STORAGE)
+        self.stores['NodeStorage'] = NodeStorage(path=base_path + NODE_STORAGE)
+        self.stores['RelationshipStorage'] = RelationshipStorage(path=base_path + RELATIONSHIP_STORAGE)
+        self.stores['LabelStorage'] = LabelStorage(path=base_path + LABEL_STORAGE)
+        self.stores['PropertyStorage'] = PropertyStorage(path=base_path + PROPERTY_STORAGE)
+        self.stores['DynamicStorage'] = DynamicStorage(path=base_path + DYNAMIC_STORAGE)
 
         self.stats = dict()
         self.update_stats()
@@ -65,35 +67,34 @@ class Worker:
         """
         return self.stats
 
-    def write_node_record(self, node_record: Record):
+    def write_record(self, record: Record, storage_type: str):
         """
-        Writes new node data to node storage.
-        :param node_record:    node record object
+        Writes record data to specified storage.
+        :param record:          record object
+        :param storage_type:    storage type
         """
-        node_storage = self.stores[NodeStorage.__qualname__]
-        node_storage.allocate_record()
+        storage = self.stores[storage_type]
+        storage.allocate_record()
 
         # node_record.idx -= node_storage.offset
-        node_record.set_index(self.stats[NodeStorage.__qualname__])
-        node_storage.write_record(node_record)
+        record.set_index(self.stats[storage])
+        storage.write_record(record)
 
         # if ok:
-        self.stats[NodeStorage.__qualname__] += 1
+        self.stats[storage] += 1
 
-    def read_node_record(self, node_id: int):
+    def read_record(self, record_id: int, storage_type: str):
         """
-        Reads node record with `node_id` from node storage.
-        :param node_id:     node id
+        Reads record with `record_id` from specified storage.
+        :param record_id:       record id
+        :param storage_type     storage type
         """
-        node_storage = self.stores[NodeStorage.__qualname__]
+        storage = self.stores[storage_type]
 
         try:
-            node_record = node_storage.read_record(node_id - node_storage.offset)
-            # node_record.idx += node_storage.offset
+            record = storage.read_record(record_id)
         except AssertionError as e:
             print(f'Error: {e}')
             raise e
 
-        return node_record
-
-    # TODO: methods for relationships, properties, labels...
+        return record
