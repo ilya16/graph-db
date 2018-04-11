@@ -8,7 +8,7 @@ from graph_db.engine.types import *
 from graph_db.fs.record import Record
 from .decoder import RecordDecoder
 from .encoder import RecordEncoder
-from .graph_storage import NodeStorage, RelationshipStorage
+from .graph_storage import NodeStorage, RelationshipStorage, LabelStorage, PropertyStorage, DynamicStorage
 from .worker import Worker
 
 
@@ -61,58 +61,34 @@ class DBFSManager:
         """
         return self.stats
 
-    def write_node_record(self, node_record: Record):
+    def write_record(self, record: Record, storage_type: str):
         """
-        Prepares node records and select appropriate node storage.
-        :param node_record:    node record object
+        Prepares records and select appropriate storage.
+        :param record:         record object
+        :param storage_type:        type of storage
         """
-        # TODO: insert label, properties first
         worker = self.workers[0]     # one local worker with storage
 
-        node_record.set_index(self.stats[NodeStorage.__qualname__])
-        worker.write_node_record(node_record)
+        record.set_index(self.stats[storage_type])
+        worker.write_record(record, storage_type)
 
         # if ok:
-        self.stats[NodeStorage.__qualname__] += 1
+        self.stats[storage_type] += 1
 
-    def read_node_record(self, node_id: int):
+    def read_record(self, record_id: int, storage_type: str):
         """
-        Selects node with `id` from the appropriate storage.
+        Selects record with `id` from the appropriate storage.
+        :param record_id:       record id
+        :param storage_type     storage type
         :return:
         """
         worker = self.workers[0]    # one local worker with storage
 
         try:
-            node_record = worker.read_node_record(node_id)
+            record = worker.read_record(record_id, storage_type)
         except AssertionError as e:
             print(f'Error at Worker #0: {e}')
             # should be rethrown
-            node_record = None
+            record = None
 
-        return node_record
-
-    # TODO: rename & implement
-
-    def read_label_record(self, label_id):
-        pass
-
-    def update_node_record(self, node: Node):
-        pass
-
-    def insert_relationship(self, rel: Relationship):
-        pass
-
-    def select_relationship(self, rel_id: int) -> Relationship:
-        pass
-
-    def update_relationship(self, rel: Relationship):
-        pass
-
-    def insert_property(self, prop: Property):
-        pass
-
-    def select_property(self, prop_id: int) -> Property:
-        pass
-
-    def update_property(self, prop: Property):
-        pass
+        return record
