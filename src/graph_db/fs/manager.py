@@ -15,7 +15,6 @@ from .worker import Worker
 # TODO: distribution of data across different workers based on ids
 # TODO: connections with remote machines
 
-
 class DBFSManager:
     """
     Graph Database File System manager.
