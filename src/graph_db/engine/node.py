@@ -1,34 +1,38 @@
+from typing import List
+
+from graph_db.engine.property import Property
+from graph_db.engine.types import DB_TYPE
 from .label import Label
 
 
 class Node:
-    """ Define a single node """
-    properties = []
-    relationships = []
+    """ Node in a Graph. """
+    _properties = []
+    _relationships = []
 
-    def __init__(self, id: int = 0, label: Label = None, used: bool = True):
-        self.id = id
-        self.label = label
-        self.used = used
-
-    def get_id(self) -> int:
-        return self.id
+    def __init__(self, label: Label, id: int = -1, used: bool = True):
+        self._id = id
+        self._label = label
+        self._used = used
 
     def set_id(self, id: int):
-        self.id = id
+        self._id = id
+
+    def get_id(self) -> int:
+        return self._id
 
     def get_label(self) -> Label:
-        return self.label
+        return self._label
 
     def set_label(self, label: Label):
-        self.label = label
+        self._label = label
 
-    def add_property(self, prop):
-        self.properties.append(prop)
+    def add_property(self, prop: Property):
+        self._properties.append(prop)
 
-    def get_property_value(self, key: object) -> object:
-        if any(key in d.key for d in self.properties):
-            for prop in self.properties:
+    def get_property_value(self, key: DB_TYPE) -> DB_TYPE:
+        if any(key in d.key for d in self._properties):
+            for prop in self._properties:
                 try:
                     return prop.key
                 except KeyError:
@@ -36,31 +40,31 @@ class Node:
         else:
             return None
 
-    def get_properties(self) -> list:
-        return self.properties
+    def get_properties(self) -> List[Property]:
+        return self._properties
 
-    def get_first_property(self):
-        if self.properties:
-            return self.properties[0]
+    def get_first_property(self) -> Property:
+        if self._properties:
+            return self._properties[0]
         else:
             return None
 
     def get_first_relationship(self):
-        if self.relationships:
-            return self.relationships[0]
+        if self._relationships:
+            return self._relationships[0]
         else:
             return None
 
-    def is_used(self) -> bool:
-        return self.used
-
     def set_used(self, used: bool):
-        self.used = used
+        self._used = used
+
+    def is_used(self) -> bool:
+        return self._used
 
     def __str__(self) -> str:
-        return f'Node #{self.id} = {{' \
-               f'label: {self.label}, ' \
+        return f'Node #{self._id} = {{' \
+               f'label: {self._label}, ' \
                f'first_property: {self.get_first_property()}, ' \
                f'first_relationship: {self.get_first_relationship()}, ' \
-               f'used: {self.used}' \
+               f'used: {self._used}' \
                f'}}'
