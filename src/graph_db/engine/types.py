@@ -6,6 +6,7 @@ from typing import Union
 __all__ = [
     'DB_TYPE',
     'BYTEORDER',
+    'SIGNED',
     'MEMORY',
     'NODE_STORAGE',
     'RELATIONSHIP_STORAGE',
@@ -16,12 +17,14 @@ __all__ = [
     'RELATIONSHIP_RECORD_SIZE',
     'PROPERTY_RECORD_SIZE',
     'LABEL_RECORD_SIZE',
-    'DYNAMIC_RECORD_SIZE'
+    'DYNAMIC_RECORD_SIZE',
+    'DYNAMIC_RECORD_PAYLOAD_SIZE'
 ]
 
-DB_TYPE = Union[str, int, float, bool]
+DB_TYPE = Union[str, int, float, bool, None]
 
 BYTEORDER = 'big'
+SIGNED = True
 
 MEMORY = 'memory:'
 DB_PATH = 'graph_db/'
@@ -36,4 +39,6 @@ NODE_RECORD_SIZE = 13
 RELATIONSHIP_RECORD_SIZE = 34
 PROPERTY_RECORD_SIZE = 20
 LABEL_RECORD_SIZE = 5
-DYNAMIC_RECORD_SIZE = 36
+DYNAMIC_RECORD_SIZE = 32
+DYNAMIC_RECORD_PAYLOAD_SIZE = 28
+
