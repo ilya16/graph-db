@@ -1,6 +1,7 @@
 from typing import List
 
 from graph_db.engine.property import Property
+from .relationship import Relationship
 from graph_db.engine.types import DB_TYPE
 from .label import Label
 
@@ -54,6 +55,9 @@ class Node:
             return self._relationships[0]
         else:
             return None
+
+    def add_relationship(self, rel: Relationship):
+        return self._relationships.append(rel)
 
     def set_used(self, used: bool):
         self._used = used
