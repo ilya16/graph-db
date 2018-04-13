@@ -5,7 +5,7 @@ import hashlib
 import random
 import time
 from graph_db.access.tokenizer import *
-from graph_db.access.parser import *
+from graph_db.access.cypher_parser import *
 
 PRINT_TOKENS = True
 PRINT_MATCHING_ASSIGNMENTS = False
