@@ -7,6 +7,7 @@ __all__ = [
     'DB_TYPE',
     'BYTEORDER',
     'SIGNED',
+    'ENCODING',
     'MEMORY',
     'NODE_STORAGE',
     'RELATIONSHIP_STORAGE',
@@ -25,6 +26,7 @@ DB_TYPE = Union[str, int, float, bool, None]
 
 BYTEORDER = 'big'
 SIGNED = True
+ENCODING = 'utf-8'
 
 MEMORY = 'memory:'
 DB_PATH = 'graph_db/'

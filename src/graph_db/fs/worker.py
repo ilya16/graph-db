@@ -77,11 +77,11 @@ class Worker:
         storage.allocate_record()
 
         # node_record.idx -= node_storage.offset
-        record.set_index(self.stats[storage])
+        record.set_index(self.stats[storage_type])
         storage.write_record(record)
 
         # if ok:
-        self.stats[storage] += 1
+        self.stats[storage_type] += 1
 
     def read_record(self, record_id: int, storage_type: str):
         """

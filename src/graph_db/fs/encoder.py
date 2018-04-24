@@ -50,7 +50,7 @@ class RecordEncoder:
     def encode_relationship(rel: Relationship) -> Record:
         """
         Encodes node object into a physical node record.
-        Node record format:
+        Relationship record format:
             1 byte      `in_use` byte
             4 bytes     `start_node` - pointer to record with start node of the relationship
             4 bytes     `end_node` – pointer to record with end node of the relationship
@@ -112,7 +112,7 @@ class RecordEncoder:
         Label record format:
             1 byte      `in_use` byte
             4 bytes     `dynamic_id` – pointer to first record with label data in dynamic storage
-        Total: 13 bytes
+        Total: 5 bytes
         :param label:       label object
         :param dynamic_id   `id` of first data chunk in dynamic storage
         :return:            encoded label record
@@ -166,7 +166,7 @@ class RecordEncoder:
                             first_record_id: int,
                             payload_size: int = DYNAMIC_RECORD_PAYLOAD_SIZE) -> List[Record]:
         """
-        Encodes data object of any supported type into a physical record.
+        Encodes data object of any supported type into a list of physical records.
         Dynamic record format:
             28 bytes    data
             4 bytes     pointer to `id` of next_chunk
@@ -181,7 +181,7 @@ class RecordEncoder:
         records = []
         data = str(data)
 
-        data_bytes = data.encode(encoding='utf-8')
+        data_bytes = data.encode(encoding=ENCODING)
 
         data_bytes += b'0' * (payload_size - (len(data_bytes) % payload_size))
 
