@@ -104,3 +104,12 @@ class Relationship:
 
     def is_used(self) -> bool:
         return self._used
+
+    def __str__(self) -> str:
+        return f'Edge #{self._id} = {{' \
+               f'label: {self._label}, ' \
+               f'first_property: {self.get_first_property()}, ' \
+               f'start_node: {self.get_start_node()}, ' \
+               f'end_node: {self.get_end_node()}, ' \
+               f'used: {self._used}' \
+               f'}}'

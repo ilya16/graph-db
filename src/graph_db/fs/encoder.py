@@ -99,6 +99,9 @@ class RecordEncoder:
         else:
             rel_bytes += b'0' * 4
 
+        #todo
+        rel_bytes += rel.is_used().to_bytes(1, byteorder=BYTEORDER, signed=SIGNED)
+
         record = Record(rel_bytes, rel.get_id())
 
         assert record.size == RELATIONSHIP_RECORD_SIZE
