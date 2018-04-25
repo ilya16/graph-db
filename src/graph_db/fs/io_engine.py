@@ -114,7 +114,7 @@ class IOEngine:
         Prepares relationship records and select appropriate relationship storage.
         :param rel:    node object
         """
-        if rel.get_label().get_id() == -1:
+        if rel.get_id() == -1:
             self.insert_label(rel.get_label())
 
         # Update start node if this relation is first for start node
