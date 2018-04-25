@@ -12,7 +12,7 @@ if __name__ == '__main__':
     io_engine.add_worker(local_storage)
     print(io_engine.get_stats())
 
-    n = Node(label=Label('TEST', id=1))
+    n = Node(label=Label('TEST', id=0))
     print(n)
     io_engine.insert_node(n)
 
