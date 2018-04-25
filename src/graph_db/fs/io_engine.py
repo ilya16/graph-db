@@ -43,6 +43,7 @@ class IOEngine:
         """
         if node.get_label().get_id() == -1:
             self.insert_label(node.get_label())
+            node.get_label().set_id(self.dbfs_manager.get_stats()['LabelStorage']-1)  # Update label id
 
         if node.get_first_relationship():
             pass
@@ -79,14 +80,15 @@ class IOEngine:
 
                 while True:
                     # read from dynamic storage until all data is collected
-                    dynamic_record = self.dbfs_manager.read_record(label_data['dynamic_id'], 'DynamicRecord')
+                    dynamic_record = self.dbfs_manager.read_record(label_data['dynamic_id'], 'DynamicStorage')
                     dynamic_data = RecordDecoder.decode_dynamic_data_record(dynamic_record)
 
                     label_name += dynamic_data['data']
 
-                    if dynamic_record['next_chunk_id'] == 0:
+                    # Need to fix this. Apparently, there are some problems with encoding/decoding
+                    if dynamic_data['next_chunk_id'] == 4294967295:     # <-- This :)
                         node.set_label(Label(label_name, node_data['label_id']))
-                        return
+                        break
 
         # TODO: implement for property and relationships
 
@@ -145,9 +147,10 @@ class IOEngine:
         Prepares label record and select appropriate label storage.
         :param label: label object
         """
-        first_dynamic_id = self.get_stats()['DynamicStorage'];
+        first_dynamic_id = self.get_stats()['DynamicStorage']
 
         dynamic_records = RecordEncoder.encode_dynamic_data(label.get_name(), first_dynamic_id)
+
         for record in dynamic_records:
             self.dbfs_manager.write_record(record, 'DynamicStorage')
 
