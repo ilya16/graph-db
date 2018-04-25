@@ -33,8 +33,8 @@ class Graph:
                             end_node=self.ids[end_node_label],
                             id=self.number_of_edges)
         self.number_of_edges += 1
-        self.io_engine.insert_relationship(edge)
         self.number_of_labels += 1
+        self.io_engine.insert_relationship(edge)
 
     def select_nth_edge(self, n):
         print(self.io_engine.select_relationship(n))
