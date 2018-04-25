@@ -10,7 +10,7 @@ class Graph:
     def __init__(self, name):
         self.name = name
         self.io_engine = IOEngine()
-        self.local_storage = Worker(base_path='./tests/local-db/', config=WorkerConfig())
+        self.local_storage = Worker(base_path='../tests/local-db/', config=WorkerConfig())
         self.io_engine.add_worker(self.local_storage)
         self.number_of_nodes = 0
         self.number_of_edges = 0
