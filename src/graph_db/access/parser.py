@@ -18,7 +18,7 @@ def parse_query(query):
             node_label = query.split()[2]
             graph.create_node(label=node_label)
         if creation_of == 'edge:':
-            edge_label = query.split()[3]
+            edge_label = query.split()[2]
             start_node = query.split()[4]
             end_node = query.split()[6]
             graph.create_edge(label=edge_label, start_node_label=start_node, end_node_label=end_node)
@@ -28,6 +28,8 @@ for query in queries:
 
 node = graph.select_nth_node(0)
 print(node.get_label().get_name())
+# edge = graph.select_nth_edge(0)
+# print(edge.get_label().get_name())
 
 
 # print(graph.select_nth_edge(0))
