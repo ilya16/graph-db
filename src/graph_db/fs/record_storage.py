@@ -23,7 +23,7 @@ class RecordStorage(metaclass=abc.ABCMeta):
         self.file: io.BufferedIOBase = open_db(self.path, record_size)
         self.records = self.storage_size() // self.record_size
         self.offset = offset
-
+        self.record_idx = 0
         self._init_base()
 
     def storage_size(self) -> int:
@@ -66,7 +66,8 @@ class RecordStorage(metaclass=abc.ABCMeta):
         Allocates bytes for a new record at the end of the storage.
         :return:                new record object.
         """
-        record = Record.empty(self.records)
+        record = Record.empty(self.records, self.record_idx)
+        self.record_idx += 1
         self.records += 1
         self.write_record(record)
         return record
