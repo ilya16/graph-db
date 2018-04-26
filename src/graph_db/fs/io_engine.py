@@ -137,7 +137,45 @@ class IOEngine:
         self.dbfs_manager.write_record(relationship_record, 'RelationshipStorage')
 
     def select_relationship(self, rel_id: int) -> Relationship:
-        pass
+        """
+                Selects relationship with `id` from the appropriate storage.
+                Collects all data from other storages.
+                :return:
+        """
+        try:
+            relationship_record = self.dbfs_manager.read_record(rel_id, 'RelationshipStorage')
+            relationship_data = RecordDecoder.decode_relationship_record(relationship_record)
+        except AssertionError as e:
+            print(f'Error at Worker #0: {e}')
+            # should be rethrown
+            relationship_data = None
+
+        relationship = Relationship(id=relationship_data['id'], label=Label('temp'), start_node=None, end_node=None)
+        if relationship_data:
+            # collecting data from other storages and building node
+
+            label_record = self.dbfs_manager.read_record(relationship_data['label_id'], 'LabelStorage')
+            label_data = RecordDecoder.decode_label_record(label_record)
+
+            if label_data:
+                label_name = ''
+
+                while True:
+                    # read from dynamic storage until all data is collected
+                    dynamic_record = self.dbfs_manager.read_record(label_data['dynamic_id'], 'DynamicStorage')
+                    dynamic_data = RecordDecoder.decode_dynamic_data_record(dynamic_record)
+
+                    label_name += dynamic_data['data']
+
+                    # Need to fix this. Apparently, there are some problems with encoding/decoding
+                    if dynamic_data['next_chunk_id'] == 4294967295:  # <-- This :)
+                        relationship.set_label(Label(label_name, relationship_data['label_id']))
+                        break
+
+        # TODO: implement for property and relationships
+
+        # finally return node with all data
+        return relationship
 
     def update_relationship(self, rel: Relationship):
         pass

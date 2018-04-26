@@ -26,10 +26,10 @@ def parse_query(query):
 for query in queries:
     parse_query(query)
 
-node = graph.select_nth_node(0)
-print(node.get_label().get_name())
-# edge = graph.select_nth_edge(0)
-# print(edge.get_label().get_name())
+# node = graph.select_nth_node(0)
+# print(node.get_label().get_name())
+edge = graph.select_nth_edge(0)
+print(edge.get_label().get_name())
 
 
 # print(graph.select_nth_edge(0))
