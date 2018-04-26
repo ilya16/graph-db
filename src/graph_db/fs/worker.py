@@ -5,21 +5,38 @@ from .graph_storage import NodeStorage, RelationshipStorage, PropertyStorage, La
 from .record import Record
 
 
+base_config = {
+    'NodeStorage': True,
+    'RelationshipStorage': True,
+    'LabelStorage': True,
+    'PropertyStorage': True,
+    'DynamicStorage': True
+}
+
+
 class Worker:
     """
     Worker Machine File System manager.
     Manages distribution of a portion of database across several stores.
     """
 
-    def __init__(self, base_path: str = MEMORY):
+    def __init__(self, base_path: str = MEMORY, config: Dict[str, bool] = base_config):
         self.stores = dict()
 
-        # may not have all stores, should be passed as a parameter
-        self.stores['NodeStorage'] = NodeStorage(path=base_path + NODE_STORAGE)
-        self.stores['RelationshipStorage'] = RelationshipStorage(path=base_path + RELATIONSHIP_STORAGE)
-        self.stores['LabelStorage'] = LabelStorage(path=base_path + LABEL_STORAGE)
-        self.stores['PropertyStorage'] = PropertyStorage(path=base_path + PROPERTY_STORAGE)
-        self.stores['DynamicStorage'] = DynamicStorage(path=base_path + DYNAMIC_STORAGE)
+        if config['NodeStorage']:
+            self.stores['NodeStorage'] = NodeStorage(path=base_path + NODE_STORAGE)
+
+        if config['RelationshipStorage']:
+            self.stores['RelationshipStorage'] = RelationshipStorage(path=base_path + RELATIONSHIP_STORAGE)
+
+        if config['LabelStorage']:
+            self.stores['LabelStorage'] = LabelStorage(path=base_path + LABEL_STORAGE)
+
+        if config['PropertyStorage']:
+            self.stores['PropertyStorage'] = PropertyStorage(path=base_path + PROPERTY_STORAGE)
+
+        if config['DynamicStorage']:
+            self.stores['DynamicStorage'] = DynamicStorage(path=base_path + DYNAMIC_STORAGE)
 
         self.stats = dict()
         self.update_stats()
@@ -71,3 +88,7 @@ class Worker:
             raise e
 
         return record
+
+    def close(self):
+        for storage in self.stores:
+            self.stores[storage].close()

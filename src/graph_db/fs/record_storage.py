@@ -2,7 +2,7 @@ import io
 import os
 import abc
 
-from .connection import open_db
+from .connection import open_file
 from .record import Record
 
 
@@ -18,7 +18,7 @@ class RecordStorage(metaclass=abc.ABCMeta):
         """
         self.record_size = record_size
         self.path: str = path
-        self.file: io.BufferedIOBase = open_db(self.path, record_size)
+        self.file: io.BufferedIOBase = open_file(self.path, record_size)
         self.records = self.storage_size() // self.record_size
         self.offset = offset
         self.record_idx = 0
@@ -77,3 +77,7 @@ class RecordStorage(metaclass=abc.ABCMeta):
         :return:                non-negative number of blocks.
         """
         return self.records
+
+    def close(self) -> None:
+        self.file.flush()
+        self.file.close()

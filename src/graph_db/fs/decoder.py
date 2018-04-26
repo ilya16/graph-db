@@ -159,11 +159,11 @@ class RecordDecoder:
 
     @staticmethod
     def _decode_int(data: bytes, n_bytes: int = 4) -> int:
-        return int.from_bytes(data[:n_bytes], byteorder=BYTEORDER)
+        return int.from_bytes(data[:n_bytes], byteorder=BYTEORDER, signed=SIGNED)
 
     @staticmethod
     def _decode_bool(data: bytes, n_bytes: int = 1) -> bool:
-        return bool.from_bytes(data[:n_bytes], byteorder=BYTEORDER)
+        return bool.from_bytes(data[:n_bytes], byteorder=BYTEORDER, signed=SIGNED)
 
     @staticmethod
     def _decode_str(data: bytes) -> str:

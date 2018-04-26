@@ -84,3 +84,7 @@ class DBFSManager:
             record = None
 
         return record
+
+    def close(self):
+        for worker in self.workers:
+            worker.close()
