@@ -82,15 +82,17 @@ class IOEngine:
 
             if label_data:
                 label_name = ''
+                dynamic_id = label_data['dynamic_id']
 
                 while True:
                     # read from dynamic storage until all data is collected
-                    dynamic_record = self.dbfs_manager.read_record(label_data['dynamic_id'], 'DynamicStorage')
+                    dynamic_record = self.dbfs_manager.read_record(dynamic_id, 'DynamicStorage')
                     dynamic_data = RecordDecoder.decode_dynamic_data_record(dynamic_record)
 
                     label_name += dynamic_data['data']
+                    dynamic_id = dynamic_data['next_chunk_id']
 
-                    if dynamic_data['next_chunk_id'] == INVALID_ID:
+                    if dynamic_id == INVALID_ID:
                         node.set_label(Label(label_name, node_data['label_id']))
                         break
 
