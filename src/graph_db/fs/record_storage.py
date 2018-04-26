@@ -5,8 +5,6 @@ import abc
 from .connection import open_db
 from .record import Record
 
-# TODO: Division of records into fixed size blocks?
-
 
 class RecordStorage(metaclass=abc.ABCMeta):
     """
@@ -79,10 +77,3 @@ class RecordStorage(metaclass=abc.ABCMeta):
         :return:                non-negative number of blocks.
         """
         return self.records
-
-    # def read_records_between(self, index_start: int, index_end: int) -> List[Record]:
-    #     """
-    #     Reads all physical record between `index_start` and `index_end` from the storage.
-    #     :return: List of records.
-    #     """
-

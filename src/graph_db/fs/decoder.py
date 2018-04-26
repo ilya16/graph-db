@@ -6,9 +6,6 @@ from .record import Record
 
 
 class RecordDecoder:
-    def __init__(self):
-        pass
-
     @staticmethod
     def decode_node_record(record: Record) -> Dict[str, DB_TYPE]:
         """
@@ -23,10 +20,15 @@ class RecordDecoder:
         :return:        a dictionary with parsed node data
         """
         idx = record.idx
-        used = bool.from_bytes(record[:1], byteorder=BYTEORDER)
-        label_id = int.from_bytes(record[1:5], byteorder=BYTEORDER)
-        first_rel_id = int.from_bytes(record[5:9], byteorder=BYTEORDER)
-        first_prop_id = int.from_bytes(record[9:13], byteorder=BYTEORDER)
+        assert idx >= 0
+
+        used = RecordDecoder._decode_bool(record[:1])
+
+        label_id = RecordDecoder._decode_int(record[1:5])
+        assert label_id >= 0
+
+        first_rel_id = RecordDecoder._decode_int(record[5:9])
+        first_prop_id = RecordDecoder._decode_int(record[9:13])
 
         return {'id': idx,
                 'used': used,
@@ -48,22 +50,25 @@ class RecordDecoder:
             4 bytes     `end_prev_id` – pointer to record with prev relationship of end node
             4 bytes     `end_next_id` – pointer to record with next relationship of end node
             4 bytes     `first_prop_id` – pointer to record with first property
-            1 byte      `is_first` byte – is this relationship first in relationship chain
-        Total: 34 bytes
+        Total: 33 bytes
         :param record:  record object
         :return:        a dictionary with parsed relationship data
         """
         idx = record.idx
-        used = bool.from_bytes(record[:1], byteorder=BYTEORDER)
-        start_node = int.from_bytes(record[1:5], byteorder=BYTEORDER)
-        end_node = int.from_bytes(record[5:9], byteorder=BYTEORDER)
-        label_id = int.from_bytes(record[9:13], byteorder=BYTEORDER)
-        start_prev_id = int.from_bytes(record[13:17], byteorder=BYTEORDER)
-        start_next_id = int.from_bytes(record[17:21], byteorder=BYTEORDER)
-        end_prev_id = int.from_bytes(record[21:25], byteorder=BYTEORDER)
-        end_next_id = int.from_bytes(record[25:29], byteorder=BYTEORDER)
-        first_prop_id = int.from_bytes(record[29:33], byteorder=BYTEORDER)
-        is_first = bool.from_bytes(record[33:34], byteorder=BYTEORDER)
+        assert idx >= 0
+
+        used = RecordDecoder._decode_bool(record[:1])
+        start_node = RecordDecoder._decode_int(record[1:5])
+        end_node = RecordDecoder._decode_int(record[5:9])
+
+        label_id = RecordDecoder._decode_int(record[9:13])
+        assert label_id >= 0
+
+        start_prev_id = RecordDecoder._decode_int(record[13:17])
+        start_next_id = RecordDecoder._decode_int(record[17:21])
+        end_prev_id = RecordDecoder._decode_int(record[21:25])
+        end_next_id = RecordDecoder._decode_int(record[25:29])
+        first_prop_id = RecordDecoder._decode_int(record[29:33])
 
         return {'id': idx,
                 'used': used,
@@ -74,8 +79,7 @@ class RecordDecoder:
                 'start_next_id': start_next_id,
                 'end_prev_id': end_prev_id,
                 'end_next_id': end_next_id,
-                'first_prop_id': first_prop_id,
-                'is_first': is_first}
+                'first_prop_id': first_prop_id}
 
     @staticmethod
     def decode_label_record(record: Record) -> Dict[str, DB_TYPE]:
@@ -89,8 +93,10 @@ class RecordDecoder:
         :return:        a dictionary with parsed label data
         """
         idx = record.idx
-        used = bool.from_bytes(record[:1], byteorder=BYTEORDER)
-        dynamic_id = int.from_bytes(record[1:5], byteorder=BYTEORDER)
+        assert idx >= 0
+
+        used = RecordDecoder._decode_bool(record[:1])
+        dynamic_id = RecordDecoder._decode_int(record[1:5])
 
         return {'id': idx,
                 'used': used,
@@ -110,10 +116,17 @@ class RecordDecoder:
         :return:        a dictionary with parsed property data
         """
         idx = record.idx
-        used = bool.from_bytes(record[:1], byteorder=BYTEORDER)
-        key_id = int.from_bytes(record[1:5], byteorder=BYTEORDER)
-        value_id = int.from_bytes(record[5:9], byteorder=BYTEORDER)
-        next_prop_id = int.from_bytes(record[9:13], byteorder=BYTEORDER)
+        assert idx >= 0
+
+        used = RecordDecoder._decode_bool(record[:1])
+
+        key_id = RecordDecoder._decode_int(record[1:5])
+        assert key_id >= 0
+
+        value_id = RecordDecoder._decode_int(record[5:9])
+        assert value_id >= 0
+
+        next_prop_id = RecordDecoder._decode_int(record[9:13])
 
         return {'id': idx,
                 'used': used,
@@ -126,16 +139,32 @@ class RecordDecoder:
         """
         Decodes dynamic data from a physical dynamic record.
         Dynamic record format:
-            28 bytes    data
+            1 byte      number of bytes taken by data
+            27 bytes    data
             4 bytes     pointer to `id` of next_chunk
         Total: 32 bytes
         :param record:  record object
         :return:        a dictionary with parsed dynamic data
         """
         idx = record.idx
-        data = record[:28].decode(encoding=ENCODING)
-        next_chunk_id = int.from_bytes(record[28:32], byteorder=BYTEORDER)
+        assert idx >= 0
+
+        data_size = RecordDecoder._decode_int(record[:1])
+        data = RecordDecoder._decode_str(record[1:data_size+1])
+        next_chunk_id = RecordDecoder._decode_int(record[28:32])
 
         return {'id': idx,
                 'data': data,
                 'next_chunk_id': next_chunk_id}
+
+    @staticmethod
+    def _decode_int(data: bytes, n_bytes: int = 4) -> int:
+        return int.from_bytes(data[:n_bytes], byteorder=BYTEORDER)
+
+    @staticmethod
+    def _decode_bool(data: bytes, n_bytes: int = 1) -> bool:
+        return bool.from_bytes(data[:n_bytes], byteorder=BYTEORDER)
+
+    @staticmethod
+    def _decode_str(data: bytes) -> str:
+        return data.decode(encoding=ENCODING)
