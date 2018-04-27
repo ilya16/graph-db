@@ -151,20 +151,20 @@ class IOEngine:
         rel_label = self.select_label(relationship_data['label_id'])
 
         # Here we run through all relations... This is kinda bad. I think so...
-        rel_start_prev = self.select_relationship(relationship_data['start_prev_id'])
-        rel_start_next = self.select_relationship(relationship_data['start_next_id'])
-        rel_end_prev = self.select_relationship(relationship_data['end_prev_id'])
-        rel_end_next = self.select_relationship(relationship_data['end_next_id'])
+        # rel_start_prev = self.select_relationship(relationship_data['start_prev_id'])
+        # rel_start_next = self.select_relationship(relationship_data['start_next_id'])
+        # rel_end_prev = self.select_relationship(relationship_data['end_prev_id'])
+        # rel_end_next = self.select_relationship(relationship_data['end_next_id'])
 
         # finally return node with all data
         return Relationship(id=relationship_data['id'],
                             label=rel_label,
                             start_node=rel_start_node,
                             end_node=rel_end_node,
-                            start_prev_rel=rel_start_prev,
-                            start_next_rel=rel_start_next,
-                            end_prev_rel=rel_end_prev,
-                            end_next_rel=rel_end_next,
+                            # start_prev_rel=rel_start_prev,
+                            # start_next_rel=rel_start_next,
+                            # end_prev_rel=rel_end_prev,
+                            # end_next_rel=rel_end_next,
                             used=relationship_data['used'])
 
     def update_relationship(self, rel: Relationship):
