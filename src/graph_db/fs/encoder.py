@@ -81,8 +81,6 @@ class RecordEncoder:
         first_prop_id = rel.get_first_property().get_id() if rel.get_first_property() else INVALID_ID
         rel_bytes += RecordEncoder._encode_int(first_prop_id)
 
-        rel_bytes += RecordEncoder._encode_bool(rel.is_used())
-
         record = Record(rel_bytes, rel.get_id())
 
         assert record.size == RELATIONSHIP_RECORD_SIZE
