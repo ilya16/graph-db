@@ -73,33 +73,15 @@ class IOEngine:
             # should be rethrown
             node_data = None
 
-        node = Node(id=node_data['id'], label=Label('temp'))
-        if node_data:
-            # collecting data from other storages and building node
-
-            label_record = self.dbfs_manager.read_record(node_data['label_id'], 'LabelStorage')
-            label_data = RecordDecoder.decode_label_record(label_record)
-
-            if label_data:
-                label_name = ''
-                dynamic_id = label_data['dynamic_id']
-
-                while True:
-                    # read from dynamic storage until all data is collected
-                    dynamic_record = self.dbfs_manager.read_record(dynamic_id, 'DynamicStorage')
-                    dynamic_data = RecordDecoder.decode_dynamic_data_record(dynamic_record)
-
-                    label_name += dynamic_data['data']
-                    dynamic_id = dynamic_data['next_chunk_id']
-
-                    if dynamic_id == INVALID_ID:
-                        node.set_label(Label(label_name, node_data['label_id']))
-                        break
+        # collecting data from other storages and building node
+        node_label = self.select_label(node_data['label_id'])
 
         # TODO: implement for property and relationships
 
         # finally return node with all data
-        return node
+        return Node(id=node_data['id'],
+                    label=node_label,
+                    used=node_data['used'])
 
     def update_node(self, node: Node):
         """
@@ -122,8 +104,12 @@ class IOEngine:
         Prepares relationship records and select appropriate relationship storage.
         :param rel:    node object
         """
-        if rel.get_id() == -1:
-            self.insert_label(rel.get_label())
+
+        relationship_id = self.get_stats()['RelationshipStorage']
+
+        if rel.get_label().get_id() == -1:
+            label = self.insert_label(rel.get_label())
+            rel.set_label(label)  # Update label
 
         # Update start node if this relation is first for start node
         if rel.get_start_node().get_first_relationship() is None:
@@ -138,15 +124,17 @@ class IOEngine:
             self.dbfs_manager.write_record(end_node_record, 'NodeStorage')
 
         # TODO: 1) Write properties of relationship
-
+        rel.set_id(relationship_id)
         relationship_record = RecordEncoder.encode_relationship(rel)
         self.dbfs_manager.write_record(relationship_record, 'RelationshipStorage')
 
+        return rel
+
     def select_relationship(self, rel_id: int) -> Relationship:
         """
-                Selects relationship with `id` from the appropriate storage.
-                Collects all data from other storages.
-                :return:
+        Selects relationship with `id` from the appropriate storage.
+        Collects all data from other storages.
+        :return:
         """
         try:
             relationship_record = self.dbfs_manager.read_record(rel_id, 'RelationshipStorage')
@@ -156,31 +144,28 @@ class IOEngine:
             # should be rethrown
             relationship_data = None
 
-        relationship = Relationship(id=relationship_data['id'], label=Label('temp'), start_node=None, end_node=None)
-        if relationship_data:
-            # collecting data from other storages and building node
+        # Below, we are collecting all relationship's data from storage
+        rel_start_node = self.select_node(relationship_data['start_node'])
+        rel_end_node = self.select_node(relationship_data['end_node'])
 
-            label_record = self.dbfs_manager.read_record(relationship_data['label_id'], 'LabelStorage')
-            label_data = RecordDecoder.decode_label_record(label_record)
+        rel_label = self.select_label(relationship_data['label_id'])
 
-            if label_data:
-                label_name = ''
-
-                while True:
-                    # read from dynamic storage until all data is collected
-                    dynamic_record = self.dbfs_manager.read_record(label_data['dynamic_id'], 'DynamicStorage')
-                    dynamic_data = RecordDecoder.decode_dynamic_data_record(dynamic_record)
-
-                    label_name += dynamic_data['data']
-
-                    if dynamic_data['next_chunk_id'] == INVALID_ID:
-                        relationship.set_label(Label(label_name, relationship_data['label_id']))
-                        break
-
-        # TODO: implement for property and relationships
+        # Here we run through all relations... This is kinda bad. I think so...
+        rel_start_prev = self.select_relationship(relationship_data['start_prev_id'])
+        rel_start_next = self.select_relationship(relationship_data['start_next_id'])
+        rel_end_prev = self.select_relationship(relationship_data['end_prev_id'])
+        rel_end_next = self.select_relationship(relationship_data['end_next_id'])
 
         # finally return node with all data
-        return relationship
+        return Relationship(id=relationship_data['id'],
+                            label=rel_label,
+                            start_node=rel_start_node,
+                            end_node=rel_end_node,
+                            start_prev_rel=rel_start_prev,
+                            start_next_rel=rel_start_next,
+                            end_prev_rel=rel_end_prev,
+                            end_next_rel=rel_end_next,
+                            used=relationship_data['used'])
 
     def update_relationship(self, rel: Relationship):
         pass
@@ -205,7 +190,31 @@ class IOEngine:
         return label
 
     def select_label(self, label_id: int) -> Label:
-        pass
+        """
+        Selects label with `id` from the appropriate storage.
+        Collects all data from other storages.
+        :param label_id:
+        :return:
+        """
+        label_record = self.dbfs_manager.read_record(label_id, 'LabelStorage')
+        label_data = RecordDecoder.decode_label_record(label_record)
+
+        if label_data:
+            label_name = ''
+            dynamic_id = label_data['dynamic_id']
+
+            while True:
+                # read from dynamic storage until all data is collected
+                dynamic_record = self.dbfs_manager.read_record(dynamic_id, 'DynamicStorage')
+                dynamic_data = RecordDecoder.decode_dynamic_data_record(dynamic_record)
+
+                label_name += dynamic_data['data']
+                dynamic_id = dynamic_data['next_chunk_id']
+
+                if dynamic_id == INVALID_ID:
+                    return Label(id=label_id,
+                                 name=label_name)
+
 
     def update_label(self, label: Label):
         pass
