@@ -17,17 +17,17 @@ from .worker import Worker
 
 class IOEngine:
     """
-    Graph Database File System manager.
-    Manages connections with local and remote database stores.
-    Manages distribution of data across several stores.
-    Processes and directs write and read requests through appropriate storage.
-    Acts as an abstraction above distributed file system.
+    Graph Database IO Engine.
+    Processes graph database queries on IO level.
     """
     def __init__(self, base_path: str = MEMORY):
         self.dbfs_manager = DBFSManager(base_path)
 
     def add_worker(self, worker: Worker):
         self.dbfs_manager.add_worker(worker)
+
+    def close(self):
+        self.dbfs_manager.close()
 
     def get_stats(self) -> Dict[str, int]:
         """
@@ -41,17 +41,22 @@ class IOEngine:
         Prepares node records and select appropriate node storage.
         :param node:    node object
         """
+        node_id = self.get_stats()['NodeStorage']
+
         if node.get_label().get_id() == -1:
-            self.insert_label(node.get_label())
-            node.get_label().set_id(self.dbfs_manager.get_stats()['LabelStorage']-1)  # Update label id
+            label = self.insert_label(node.get_label())
+            node.set_label(label)  # Update label
 
         if node.get_first_relationship():
             pass
 
         # TODO: Write properties of node
 
+        node.set_id(node_id)
         node_record = RecordEncoder.encode_node(node)
         self.dbfs_manager.write_record(node_record, 'NodeStorage')
+
+        return node
 
     def select_node(self, node_id: int):
         """
@@ -77,16 +82,17 @@ class IOEngine:
 
             if label_data:
                 label_name = ''
+                dynamic_id = label_data['dynamic_id']
 
                 while True:
                     # read from dynamic storage until all data is collected
-                    dynamic_record = self.dbfs_manager.read_record(label_data['dynamic_id'], 'DynamicStorage')
+                    dynamic_record = self.dbfs_manager.read_record(dynamic_id, 'DynamicStorage')
                     dynamic_data = RecordDecoder.decode_dynamic_data_record(dynamic_record)
 
                     label_name += dynamic_data['data']
+                    dynamic_id = dynamic_data['next_chunk_id']
 
-                    # Need to fix this. Apparently, there are some problems with encoding/decoding
-                    if dynamic_data['next_chunk_id'] == 4294967295:     # <-- This :)
+                    if dynamic_id == INVALID_ID:
                         node.set_label(Label(label_name, node_data['label_id']))
                         break
 
@@ -167,8 +173,7 @@ class IOEngine:
 
                     label_name += dynamic_data['data']
 
-                    # Need to fix this. Apparently, there are some problems with encoding/decoding
-                    if dynamic_data['next_chunk_id'] == 4294967295:  # <-- This :)
+                    if dynamic_data['next_chunk_id'] == INVALID_ID:
                         relationship.set_label(Label(label_name, relationship_data['label_id']))
                         break
 
@@ -186,14 +191,18 @@ class IOEngine:
         :param label: label object
         """
         first_dynamic_id = self.get_stats()['DynamicStorage']
+        label_id = self.get_stats()['LabelStorage']
 
         dynamic_records = RecordEncoder.encode_dynamic_data(label.get_name(), first_dynamic_id)
 
         for record in dynamic_records:
             self.dbfs_manager.write_record(record, 'DynamicStorage')
 
+        label.set_id(label_id)
         label_record = RecordEncoder.encode_label(label, first_dynamic_id)
         self.dbfs_manager.write_record(label_record, 'LabelStorage')
+
+        return label
 
     def select_label(self, label_id: int) -> Label:
         pass

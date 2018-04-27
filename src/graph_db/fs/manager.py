@@ -1,14 +1,7 @@
 from typing import Dict
 
-from graph_db.engine.label import Label
-from graph_db.engine.node import Node
-from graph_db.engine.property import Property
-from graph_db.engine.relationship import Relationship
 from graph_db.engine.types import *
 from graph_db.fs.record import Record
-from .decoder import RecordDecoder
-from .encoder import RecordEncoder
-from .graph_storage import NodeStorage, RelationshipStorage, LabelStorage, PropertyStorage, DynamicStorage
 from .worker import Worker
 
 
@@ -91,3 +84,7 @@ class DBFSManager:
             record = None
 
         return record
+
+    def close(self):
+        for worker in self.workers:
+            worker.close()

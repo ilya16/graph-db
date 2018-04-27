@@ -2,10 +2,8 @@ import io
 import os
 import abc
 
-from .connection import open_db
+from .connection import open_file
 from .record import Record
-
-# TODO: Division of records into fixed size blocks?
 
 
 class RecordStorage(metaclass=abc.ABCMeta):
@@ -20,7 +18,7 @@ class RecordStorage(metaclass=abc.ABCMeta):
         """
         self.record_size = record_size
         self.path: str = path
-        self.file: io.BufferedIOBase = open_db(self.path, record_size)
+        self.file: io.BufferedIOBase = open_file(self.path, record_size)
         self.records = self.storage_size() // self.record_size
         self.offset = offset
         self.record_idx = 0
@@ -80,9 +78,6 @@ class RecordStorage(metaclass=abc.ABCMeta):
         """
         return self.records
 
-    # def read_records_between(self, index_start: int, index_end: int) -> List[Record]:
-    #     """
-    #     Reads all physical record between `index_start` and `index_end` from the storage.
-    #     :return: List of records.
-    #     """
-
+    def close(self) -> None:
+        self.file.flush()
+        self.file.close()
