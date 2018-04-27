@@ -28,7 +28,7 @@ class Graph:
         return self.io_engine.select_node(n)
 
     def create_edge(self, label, start_node_label, end_node_label):
-        edge = Relationship(label=Label(label, id=self.number_of_labels),
+        edge = Relationship(label=Label(label),
                             start_node=self.ids[start_node_label],
                             end_node=self.ids[end_node_label])
         self.number_of_edges += 1
