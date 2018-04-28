@@ -18,6 +18,7 @@ for query in queries:
 
 node = graph.select_nth_node(1)
 print(node.get_first_property().get_key())
+print(node._label.get_name())
 # print(node.get_property_value('Animal'))
 
 # deleting created temp stores
