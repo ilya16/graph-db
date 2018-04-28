@@ -66,8 +66,10 @@ class Node:
 
     def __str__(self) -> str:
         return f'Node #{self._id} = {{' \
-               f'label: {self._label}, ' \
+               f'label: {self._label.get_name()}, ' \
                f'first_property: {self.get_first_property()}, ' \
-               f'first_relationship: {self.get_first_relationship()}, ' \
                f'used: {self._used}' \
                f'}}'
+
+
+# f'first_relationship: {self.get_first_relationship()}, ' \

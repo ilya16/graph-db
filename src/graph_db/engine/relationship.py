@@ -107,7 +107,7 @@ class Relationship:
 
     def __str__(self) -> str:
         return f'Edge #{self._id} = {{' \
-               f'label: {self._label}, ' \
+               f'label: {self._label.get_name()}, ' \
                f'first_property: {self.get_first_property()}, ' \
                f'start_node: {self.get_start_node()}, ' \
                f'end_node: {self.get_end_node()}, ' \

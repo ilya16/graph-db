@@ -8,19 +8,23 @@ from graph_db.fs.worker import Worker
 class Graph:
 
     def __init__(self, name, temp_dir):
+        temp_storage = Worker(base_path=temp_dir)
         self.name = name
         self.io_engine = IOEngine()
-        temp_storage = Worker(base_path=temp_dir)
         self.io_engine.add_worker(temp_storage)
         self.number_of_nodes = 0
         self.number_of_edges = 0
         self.number_of_labels = 0
-        self.ids = {}
+        self.ids_nodes = dict()
+        self.ids_edges = dict()
 
     def create_node(self, label):
         node = Node(label=Label(label))
         self.io_engine.insert_node(node)
-        self.ids[label] = node
+        if label in self.ids_nodes:
+            self.ids_nodes[label].append(node)
+        else:
+            self.ids_nodes[label] = [node]
         self.number_of_nodes += 1
         self.number_of_labels += 1
 
@@ -29,14 +33,24 @@ class Graph:
 
     def create_edge(self, label, start_node_label, end_node_label):
         edge = Relationship(label=Label(label),
-                            start_node=self.ids[start_node_label],
-                            end_node=self.ids[end_node_label])
+                            start_node=self.ids_nodes[start_node_label][0],
+                            end_node=self.ids_nodes[end_node_label][0])
+        self.io_engine.insert_relationship(edge)
+        if label in self.ids_edges:
+            self.ids_edges[label].append(edge)
+        else:
+            self.ids_edges[label] = [edge]
         self.number_of_edges += 1
         self.number_of_labels += 1
-        self.io_engine.insert_relationship(edge)
 
     def select_nth_edge(self, n):
         return self.io_engine.select_relationship(n)
+
+    def select_edge_by_label(self, label):
+        return self.ids_edges[label]
+
+    def select_node_by_label(self, label):
+        return self.ids_nodes[label]
 
     def close_engine(self):
         self.io_engine.close()

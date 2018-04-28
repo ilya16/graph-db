@@ -1,5 +1,3 @@
-from graph_db.engine.graph import Graph
-
 
 class Parser:
 
@@ -15,4 +13,10 @@ class Parser:
                 start_node = query.split()[4]
                 end_node = query.split()[6]
                 graph.create_edge(label=edge_label, start_node_label=start_node, end_node_label=end_node)
-        return graph
+            return graph
+        elif query_type == 'MATCH':
+            match_of = query.split()[1]
+            if match_of == 'node:':
+                return graph.select_node_by_label(query.split()[2])
+            if match_of == 'edge:':
+                return graph.select_edge_by_label(query.split()[2])
