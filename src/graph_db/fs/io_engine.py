@@ -215,17 +215,82 @@ class IOEngine:
                     return Label(id=label_id,
                                  name=label_name)
 
-
     def update_label(self, label: Label):
         pass
 
-    # TODO: Finish implementation of property-related methods
-
     def insert_property(self, prop: Property):
-        pass
+        """
+        Prepares property record and select appropriate property storage.
+        :param prop:
+        :return:
+        """
+        property_id = self.get_stats()['PropertyStorage']
+
+        # encode key
+        key_dynamic_id = self.get_stats()['DynamicStorage']
+        key_dynamic_records = RecordEncoder.encode_dynamic_data(prop.get_key(), key_dynamic_id)
+        for record in key_dynamic_records:
+            self.dbfs_manager.write_record(record, 'DynamicStorage')
+
+        # encode value
+        value_dynamic_id = self.get_stats()['DynamicStorage']
+        value_dynamic_records = RecordEncoder.encode_dynamic_data(prop.get_value(), value_dynamic_id)
+        for record in value_dynamic_records:
+            self.dbfs_manager.write_record(record, 'DynamicStorage')
+
+        prop.set_id(property_id)
+        property_record = RecordEncoder.encode_property(used=prop.is_used(),
+                                                        key_id=key_dynamic_id,
+                                                        value_id=value_dynamic_id)
+        self.dbfs_manager.write_record(property_record, 'PropertyRecord')
+
+        return prop
 
     def select_property(self, prop_id: int) -> Property:
-        pass
+        """
+        Selects property with `id` from the appropriate storage.
+        Collects all data from other storages.
+        :param prop_id:
+        :return:
+        """
+        property_record = self.dbfs_manager.read_record(prop_id, 'PropertyStorage')
+        property_data = RecordDecoder.decode_property_record(property_record)
+
+        # Collect key: string now only
+        key = ''
+        key_id = property_data['key_id']
+        while True:
+            # read from dynamic storage until all data is collected
+            dynamic_record = self.dbfs_manager.read_record(key_id, 'DynamicStorage')
+            dynamic_data = RecordDecoder.decode_dynamic_data_record(dynamic_record)
+
+            key += dynamic_data['data']
+            key_id = dynamic_data['next_chunk_id']
+
+            if key_id == INVALID_ID:
+                break
+
+        # Collect value: string now only
+        value = ''
+        value_id = property_data['value_id']
+        while True:
+            # read from dynamic storage until all data is collected
+            dynamic_record = self.dbfs_manager.read_record(value_id, 'DynamicStorage')
+            dynamic_data = RecordDecoder.decode_dynamic_data_record(dynamic_record)
+
+            value += dynamic_data['data']
+            value_id = dynamic_data['next_chunk_id']
+
+            if value_id == INVALID_ID:
+                break
+
+        # Collect next property
+        # next_property = self.select_property(property_data['next_prop_id'])
+
+        return Property(used=property_data['used'],
+                        id=property_data['id'],
+                        key=key,
+                        value=value)
 
     def update_property(self, prop: Property):
         pass
