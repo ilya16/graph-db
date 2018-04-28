@@ -50,7 +50,20 @@ class IOEngine:
         if node.get_first_relationship():
             pass
 
-        # TODO: Write properties of node
+        # TODO: PLEASE REFACTOR this BAD bad code below...
+        if node.get_first_property():
+            if len(node.get_properties()) > 1:
+                for i in range(1, len(node.get_properties())):
+                    idx = self.get_stats()['PropertyStorage'] + 1  # next property id
+                    node.get_properties()[i].set_id(idx)
+                    node.get_properties()[i-1].set_next_property(node.get_properties()[i])
+                    property = self.insert_property(node.get_properties()[i-1])
+                    node.get_properties()[i-1].set_id(property.get_id())
+                property = self.insert_property(node.get_properties()[-1])
+                node.get_properties()[-1].set_id(property.get_id())
+            else:
+                property = self.insert_property(node.get_first_property())
+                node.get_first_property().set_id(property.get_id())
 
         node.set_id(node_id)
         node_record = RecordEncoder.encode_node(node)
@@ -242,7 +255,7 @@ class IOEngine:
         property_record = RecordEncoder.encode_property(used=prop.is_used(),
                                                         key_id=key_dynamic_id,
                                                         value_id=value_dynamic_id)
-        self.dbfs_manager.write_record(property_record, 'PropertyRecord')
+        self.dbfs_manager.write_record(property_record, 'PropertyStorage')
 
         return prop
 
