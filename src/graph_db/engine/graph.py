@@ -1,6 +1,7 @@
 from graph_db.engine.label import Label
 from graph_db.engine.relationship import Relationship
 from graph_db.engine.node import Node
+from graph_db.engine.property import Property
 from graph_db.fs.io_engine import IOEngine
 from graph_db.fs.worker import Worker
 
@@ -18,8 +19,11 @@ class Graph:
         self.ids_nodes = dict()
         self.ids_edges = dict()
 
-    def create_node(self, label):
+    def create_node(self, label, key, value):
         node = Node(label=Label(label))
+        if key is not None and value is not None:
+            prop = Property(key, value)
+            node.add_property(prop)
         self.io_engine.insert_node(node)
         if label in self.ids_nodes:
             self.ids_nodes[label].append(node)
@@ -31,10 +35,13 @@ class Graph:
     def select_nth_node(self, n):
         return self.io_engine.select_node(n)
 
-    def create_edge(self, label, start_node_label, end_node_label):
+    def create_edge(self, label, start_node_label, end_node_label, key, value):
         edge = Relationship(label=Label(label),
                             start_node=self.ids_nodes[start_node_label][0],
                             end_node=self.ids_nodes[end_node_label][0])
+        if key is not None and value is not None:
+            prop = Property(key, value)
+            edge.add_property(prop)
         self.io_engine.insert_relationship(edge)
         if label in self.ids_edges:
             self.ids_edges[label].append(edge)
