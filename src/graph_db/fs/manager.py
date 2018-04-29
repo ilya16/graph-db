@@ -53,18 +53,23 @@ class DBFSManager:
         """
         return self.stats
 
-    def write_record(self, record: Record, storage_type: str):
+    def write_record(self, record: Record, storage_type: str, update: bool = False):
         """
         Prepares records and select appropriate storage.
-        :param record:         record object
-        :param storage_type:        type of storage
+        :param record:          record object
+        :param storage_type:    type of storage
+        :param update:          is it an update of previous record or not
         """
         worker = self.workers[0]     # one local worker with storage
 
-        if record.idx == self.stats[storage_type]:
+        # Reassign record_id for a worker
+        if not update:
+            # TODO: in dfs should be mapped
             record.set_index(self.stats[storage_type])
+        else:
+            pass
 
-        worker.write_record(record, storage_type)
+        worker.write_record(record, storage_type, update=update)
 
         # if ok:
         if record.idx == self.stats[storage_type]:

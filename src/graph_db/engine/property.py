@@ -1,4 +1,4 @@
-from graph_db.engine.types import DB_TYPE
+from graph_db.engine.types import DB_TYPE, INVALID_ID
 
 
 class Property:
@@ -7,7 +7,7 @@ class Property:
     def __init__(self,
                  key: DB_TYPE,
                  value: DB_TYPE,
-                 id: int = 0,
+                 id: int = INVALID_ID,
                  used: bool = True,
                  next_property: 'Property' = None):
         self._id = id

@@ -58,17 +58,19 @@ class Worker:
         """
         return self.stats
 
-    def write_record(self, record: Record, storage_type: str):
+    def write_record(self, record: Record, storage_type: str, update: bool = False):
         """
         Writes record data to specified storage.
         :param record:          record object
         :param storage_type:    storage type
+        :param update:          is it an update of previous record or not
         """
         storage = self.stores[storage_type]
-        storage.allocate_record()
 
-        if record.idx == self.stats[storage_type]:
-            record.set_index(self.stats[storage_type])
+        if not update:
+            new_record = storage.allocate_record()
+            record.set_index(new_record.idx)
+
         storage.write_record(record)
 
         # if ok:

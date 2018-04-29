@@ -36,38 +36,50 @@ class IOEngine:
         """
         return self.dbfs_manager.get_stats()
 
+    # Node
+
     def insert_node(self, node: Node):
+        """
+        Updates node record in node storage.
+        :param node:    node object
+        """
+        return self._insert_node(node, update=False)
+
+    def update_node(self, node: Node):
+        """
+        Updates node record in node storage.
+        :param node:    node object
+        """
+        return self._insert_node(node, update=True)
+
+    def _insert_node(self, node: Node, update: bool = False):
         """
         Prepares node records and select appropriate node storage.
         :param node:    node object
         """
-        node_id = self.get_stats()['NodeStorage']
+        if node.get_id() == INVALID_ID:
+            node.set_id(self.get_stats()['NodeStorage'])
 
-        if node.get_label().get_id() == -1:
+        if node.get_label().get_id() == INVALID_ID:
             label = self.insert_label(node.get_label())
             node.set_label(label)  # Update label
 
         if node.get_first_relationship():
             pass
 
-        # TODO: PLEASE REFACTOR this BAD bad code below...
-        if node.get_first_property():
-             if len(node.get_properties()) > 1:
-                 for i in range(1, len(node.get_properties())):
-                     idx = self.get_stats()['PropertyStorage'] + 1  # next property id
-                     node.get_properties()[i].set_id(idx)
-                     node.get_properties()[i-1].set_next_property(node.get_properties()[i])
-                     property = self.insert_property(node.get_properties()[i-1])
-                     node.get_properties()[i-1].set_id(property.get_id())
-                 property = self.insert_property(node.get_properties()[-1])
-                 node.get_properties()[-1].set_id(property.get_id())
-             else:
-                 property = self.insert_property(node.get_first_property())
-                 node.get_first_property().set_id(property.get_id())
+        first_property_id = self.get_stats()['PropertyStorage']
+        for i in range(len(node.get_properties())):
+            node.get_properties()[i].set_id(first_property_id + i)
+            try:
+                node.get_properties()[i].set_next_property(node.get_properties()[i + 1])
+            except IndexError:
+                pass
 
-        node.set_id(node_id)
+        for i in range(len(node.get_properties())):
+            self.insert_property(node.get_properties()[i])
+
         node_record = RecordEncoder.encode_node(node)
-        self.dbfs_manager.write_record(node_record, 'NodeStorage')
+        self.dbfs_manager.write_record(node_record, 'NodeStorage', update=update)
 
         return node
 
@@ -83,9 +95,9 @@ class IOEngine:
         except AssertionError as e:
             print(f'Error at Worker #0: {e}')
             # should be rethrown
-            node_data = None
+            return None
 
-        # collecting data from other storages and building node
+        # collecting data from other stores and building node
         node_label = self.select_label(node_data['label_id'])
 
         node = Node(id=node_data['id'],
@@ -93,74 +105,66 @@ class IOEngine:
                     used=node_data['used'])
 
         if node_data['first_prop_id'] != INVALID_ID:
-            property = self.select_property(node_data['first_prop_id'])
-            node.add_property(property)
-            while property.get_next_property():
-                property = property.get_next_property()
-                node.add_property(property)
+            node_property = self.select_property(node_data['first_prop_id'])
+            node.add_property(node_property)
+            while node_property.get_next_property():
+                node_property = node_property.get_next_property()
+                node.add_property(node_property)
 
         # finally return node with all data
         return node
 
-    def update_node(self, node: Node):
-        """
-        Updates node record in node storage.
-        :param node:    node object
-        """
-        if node.get_label().get_id() == -1:
-            self.insert_label(node.get_label())
-
-        if node.get_first_relationship():
-            pass
-
-        # TODO: Check Property
-
-        node_record = RecordEncoder.encode_node(node)
-        self.dbfs_manager.write_record(node_record, 'NodeStorage')
+    # Relationship
 
     def insert_relationship(self, rel: Relationship):
+        """
+        Updates relationship record in node storage.
+        :param rel:     relationship object
+        """
+        return self._insert_relationship(rel, update=False)
+
+    def update_relationship(self, rel: Relationship):
+        """
+        Updates relationship record in node storage.
+        :param rel:     relationship object
+        """
+        return self._insert_relationship(rel, update=True)
+
+    def _insert_relationship(self, rel: Relationship, update: bool = False):
         """
         Prepares relationship records and select appropriate relationship storage.
         :param rel:    node object
         """
+        if rel.get_id() == INVALID_ID:
+            rel.set_id(self.get_stats()['RelationshipStorage'])
 
-        relationship_id = self.get_stats()['RelationshipStorage']
-
-        if rel.get_label().get_id() == -1:
+        if rel.get_label().get_id() == INVALID_ID:
             label = self.insert_label(rel.get_label())
             rel.set_label(label)  # Update label
 
         # Update start node if this relation is first for start node
-        if rel.get_start_node().get_first_relationship() is None:
-            rel.get_start_node().add_relationship(rel)
+        if rel.get_start_node().get_first_relationship() == rel:
             start_node_record = RecordEncoder.encode_node(rel.get_start_node())
             self.dbfs_manager.write_record(start_node_record, 'NodeStorage')
 
         # Update end node if this relation is first for end node
-        if rel.get_end_node().get_first_relationship() is None:
-            rel.get_end_node().add_relationship(rel)
+        if rel.get_end_node().get_first_relationship() == rel:
             end_node_record = RecordEncoder.encode_node(rel.get_end_node())
             self.dbfs_manager.write_record(end_node_record, 'NodeStorage')
 
-        # TODO: PLEASE REFACTOR this BAD bad code below...
-        if rel.get_first_property():
-            if len(rel.get_properties()) > 1:
-                for i in range(1, len(rel.get_properties())):
-                    idx = self.get_stats()['PropertyStorage'] + 1  # next property id
-                    rel.get_properties()[i].set_id(idx)
-                    rel.get_properties()[i - 1].set_next_property(rel.get_properties()[i])
-                    property = self.insert_property(rel.get_properties()[i - 1])
-                    rel.get_properties()[i - 1].set_id(property.get_id())
-                property = self.insert_property(rel.get_properties()[-1])
-                rel.get_properties()[-1].set_id(property.get_id())
-            else:
-                print(rel.get_first_property().get_value())
-                property = self.insert_property(rel.get_first_property())
-                rel.get_first_property().set_id(property.get_id())
+        first_property_id = self.get_stats()['PropertyStorage']
+        for i in range(len(rel.get_properties())):
+            rel.get_properties()[i].set_id(first_property_id + i)
+            try:
+                rel.get_properties()[i].set_next_property(rel.get_properties()[i + 1])
+            except IndexError:
+                pass
 
-        rel.set_id(relationship_id)
+        for i in range(len(rel.get_properties())):
+            self.insert_property(rel.get_properties()[i])
+
         relationship_record = RecordEncoder.encode_relationship(rel)
-        self.dbfs_manager.write_record(relationship_record, 'RelationshipStorage')
+        self.dbfs_manager.write_record(relationship_record, 'RelationshipStorage', update=update)
 
         return rel
 
@@ -211,25 +215,38 @@ class IOEngine:
         # finally return node with all data
         return relationship
 
-    def update_relationship(self, rel: Relationship):
-        pass
+    # Label
 
     def insert_label(self, label: Label):
+        """
+        Updates label record in node storage.
+        :param label:   label object
+        """
+        return self._insert_label(label, update=False)
+
+    def update_label(self, label: Label):
+        """
+        Updates node record in node storage.
+        :param label:   label object
+        """
+        return self._insert_label(label, update=True)
+
+    def _insert_label(self, label: Label, update: bool = False):
         """
         Prepares label record and select appropriate label storage.
         :param label: label object
         """
+        if label.get_id() == INVALID_ID:
+            label.set_id(self.get_stats()['LabelStorage'])
         first_dynamic_id = self.get_stats()['DynamicStorage']
-        label_id = self.get_stats()['LabelStorage']
 
         dynamic_records = RecordEncoder.encode_dynamic_data(label.get_name(), first_dynamic_id)
 
         for record in dynamic_records:
             self.dbfs_manager.write_record(record, 'DynamicStorage')
 
-        label.set_id(label_id)
         label_record = RecordEncoder.encode_label(label, first_dynamic_id)
-        self.dbfs_manager.write_record(label_record, 'LabelStorage')
+        self.dbfs_manager.write_record(label_record, 'LabelStorage', update=update)
 
         return label
 
@@ -256,19 +273,32 @@ class IOEngine:
                 dynamic_id = dynamic_data['next_chunk_id']
 
                 if dynamic_id == INVALID_ID:
-                    return Label(id=label_id,
-                                 name=label_name)
+                    return Label(id=label_id, name=label_name)
 
-    def update_label(self, label: Label):
-        pass
+    # Property
 
     def insert_property(self, prop: Property):
+        """
+        Updates property record in node storage.
+        :param prop:    prop object
+        """
+        return self._insert_property(prop, update=False)
+
+    def update_property(self, prop: Property):
+        """
+        Updates property record in node storage.
+        :param prop:    prop object
+        """
+        return self._insert_property(prop, update=True)
+
+    def _insert_property(self, prop: Property, update: bool = False):
         """
         Prepares property record and select appropriate property storage.
         :param prop:
         :return:
         """
-        property_id = self.get_stats()['PropertyStorage']
+        if prop.get_id() == INVALID_ID:
+            prop.set_id(self.get_stats()['PropertyStorage'])
 
         # encode key
         key_dynamic_id = self.get_stats()['DynamicStorage']
@@ -282,11 +312,13 @@ class IOEngine:
         for record in value_dynamic_records:
             self.dbfs_manager.write_record(record, 'DynamicStorage')
 
-        prop.set_id(property_id)
+        next_prop_id = prop.get_next_property().get_id() if prop.get_next_property() else INVALID_ID
+
         property_record = RecordEncoder.encode_property(used=prop.is_used(),
                                                         key_id=key_dynamic_id,
-                                                        value_id=value_dynamic_id)
-        self.dbfs_manager.write_record(property_record, 'PropertyStorage')
+                                                        value_id=value_dynamic_id,
+                                                        next_prop_id=next_prop_id)
+        self.dbfs_manager.write_record(property_record, 'PropertyStorage', update=update)
 
         return prop
 
@@ -339,6 +371,3 @@ class IOEngine:
                         key=key,
                         value=value,
                         next_property=next_property)
-
-    def update_property(self, prop: Property):
-        pass

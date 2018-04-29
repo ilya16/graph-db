@@ -29,7 +29,7 @@ class IOEngineCase(TestCase):
         with self.assertRaises(FileNotFoundError):
             os.listdir(self.temp_dir)
 
-    def test_writes(self):
+    def test_nodes_and_labels(self):
         label = Label('test')
         node = Node(label)
 
@@ -92,15 +92,23 @@ class IOEngineCase(TestCase):
         relationship = Relationship(label=label_three,
                                     start_node=first_node,
                                     end_node=second_node)
+        first_node.add_relationship(relationship)
+        second_node.add_relationship(relationship)
+
         relationship = self.io_engine.insert_relationship(relationship)
         self.assertEqual(1, self.io_engine.get_stats()['RelationshipStorage'], 'Storage contains extra data')
+        self.assertEqual(3, self.io_engine.get_stats()['LabelStorage'], 'LabelStorage is not consistent')
 
         retrieved_relationship = self.io_engine.select_relationship(relationship.get_id())
-        self.assertEqual(retrieved_relationship.get_id(), relationship.get_id(), 'Relationship id have changed')
+        self.assertEqual(retrieved_relationship.get_id(), relationship.get_id(), 'Relationship id has changed')
         self.assertEqual(0, retrieved_relationship.get_id(), 'Relationship has incorrect id')
         self.assertEqual(first_node.get_id(), retrieved_relationship.get_start_node().get_id(), 'Start node id has changed')
         self.assertEqual(second_node.get_id(), retrieved_relationship.get_end_node().get_id(), 'End node id has changed')
         self.assertEqual('loves :-)', retrieved_relationship.get_label().get_name(), 'Relationship\'s label has changed')
+
+        # Checking that node records hav been updated
+        retrieved_first_node = self.io_engine.select_node(first_node.get_id())
+        # self.assertEqual(relationship.get_id(), retrieved_first_node.get_first_relationship().get_id())
 
         # Insert and select
         label_two = Label('Xbox360')
@@ -109,10 +117,13 @@ class IOEngineCase(TestCase):
         self.assertEqual('Robin', first_node.get_label().get_name(), 'Node\'s name has changed')
         self.assertEqual(0, first_node.get_id(), 'Node\'s id has changed')
 
-        second_node = self.io_engine.insert_node(Node(label_two))
+        third_node = self.io_engine.insert_node(Node(label_two))
         relationship = Relationship(label=label_three,
                                     start_node=first_node,
-                                    end_node=second_node)
+                                    end_node=third_node)
+        first_node.add_relationship(relationship)
+        third_node.add_relationship(relationship)
+
         relationship = self.io_engine.insert_relationship(relationship)
         self.assertEqual(2, self.io_engine.get_stats()['RelationshipStorage'], 'Storage has incorrect number of data')
 
@@ -120,45 +131,41 @@ class IOEngineCase(TestCase):
         self.assertEqual(retrieved_relationship.get_id(), relationship.get_id(), 'Relationship id have changed')
         self.assertEqual(1, retrieved_relationship.get_id(), 'Relationship has incorrect id')
         self.assertEqual(first_node.get_id(), retrieved_relationship.get_start_node().get_id(), 'Start node id has changed')
-        self.assertEqual(second_node.get_id(), retrieved_relationship.get_end_node().get_id(), 'End node id has changed')
+        self.assertEqual(third_node.get_id(), retrieved_relationship.get_end_node().get_id(), 'End node id has changed')
         self.assertEqual('plays', retrieved_relationship.get_label().get_name(), 'Relationship\'s label has changed')
 
     def test_properties(self):
         label = Label('test')
-        node = Node(label)
-
-        node = self.io_engine.insert_node(node)
+        self.io_engine.insert_node(Node(label))
         self.assertEqual(1, self.io_engine.get_stats()['NodeStorage'], 'Storage contains extra data')
 
         # Insert and select first property
-        property = Property(key='Age', value='18')
-        property = self.io_engine.insert_property(property)
+        node_property = Property(key='Age', value='18')
+        node_property = self.io_engine.insert_property(node_property)
         self.assertEqual(1, self.io_engine.get_stats()['PropertyStorage'], 'Storage contains extra data')
 
-        retrieved_property = self.io_engine.select_property(property.get_id())
-        self.assertEqual(retrieved_property.get_id(), property.get_id(), 'Property ids have changed')
+        retrieved_property = self.io_engine.select_property(node_property.get_id())
+        self.assertEqual(retrieved_property.get_id(), node_property.get_id(), 'Property ids have changed')
         self.assertEqual(0, retrieved_property.get_id(), 'Property has incorrect id')
         self.assertEqual('Age', retrieved_property.get_key(), 'Property\'s key have changed')
         self.assertEqual('18', retrieved_property.get_value(), 'Property\'s value have changed')
 
         # Insert and select second property
-        property = Property(key='Sex', value='Male')
-        property = self.io_engine.insert_property(property)
+        node_property = Property(key='Sex', value='Male')
+        node_property = self.io_engine.insert_property(node_property)
         self.assertEqual(2, self.io_engine.get_stats()['PropertyStorage'], 'Storage has incorrect number of properties')
 
-        retrieved_property = self.io_engine.select_property(property.get_id())
-        self.assertEqual(retrieved_property.get_id(), property.get_id(), 'Property ids have changed')
+        retrieved_property = self.io_engine.select_property(node_property.get_id())
+        self.assertEqual(retrieved_property.get_id(), node_property.get_id(), 'Property ids have changed')
         self.assertEqual(1, retrieved_property.get_id(), 'Property has incorrect id')
         self.assertEqual('Sex', retrieved_property.get_key(), 'Property\'s key have changed')
         self.assertEqual('Male', retrieved_property.get_value(), 'Property\'s value have changed')
-
 
     def test_simple_case(self):
         """
         Simulate simple example that uses all features of file system
         :return:
         """
-
         # Define labels
         node_label = Label('User')
         edge_label = Label('loves :-)')
@@ -172,12 +179,13 @@ class IOEngineCase(TestCase):
         first_node.add_property(Property('Male', True))
 
         # Update node with new properties
-        first_node = self.io_engine.insert_node(first_node)
+        first_node = self.io_engine.update_node(first_node)
 
         retrieved_node = self.io_engine.select_node(first_node.get_id())
-        self.assertEqual('Robin', retrieved_node.get_first_property().get_key(), 'Value of first property has changed')
-        self.assertEqual(18, retrieved_node.get_properties()[1].get_key(), 'Value of second property has changed')
-        self.assertEqual(True, retrieved_node.get_properties()[2].get_key(), 'Value of third property has changed')
+        self.assertEqual(0, retrieved_node.get_id(), 'Node id is incorrect')
+        self.assertEqual('Robin', retrieved_node.get_first_property().get_value(), 'Value of first property has changed')
+        self.assertEqual('18', retrieved_node.get_properties()[1].get_value(), 'Value of second property has changed')
+        self.assertEqual('True', retrieved_node.get_properties()[2].get_value(), 'Value of third property has changed')
 
         # Define second node
         second_node = self.io_engine.insert_node(Node(node_label))
@@ -189,18 +197,21 @@ class IOEngineCase(TestCase):
         second_node.add_property(Property('Male', False))
 
         # Update node with new properties
-        second_node = self.io_engine.insert_node(first_node)
+        second_node = self.io_engine.update_node(second_node)
         self.assertEqual(1, second_node.get_id(), 'Incorrect id of node')
 
         retrieved_node = self.io_engine.select_node(second_node.get_id())
-        self.assertEqual('Sara', retrieved_node.get_first_property().get_key(), 'Value of first property has changed')
-        self.assertEqual(20, retrieved_node.get_properties()[1].get_key(), 'Value of second property has changed')
-        self.assertEqual(False, retrieved_node.get_properties()[2].get_key(), 'Value of third property has changed')
+        self.assertEqual('Sara', retrieved_node.get_first_property().get_value(), 'Value of first property has changed')
+        self.assertEqual('20', retrieved_node.get_properties()[1].get_value(), 'Value of second property has changed')
+        self.assertEqual('False', retrieved_node.get_properties()[2].get_value(), 'Value of third property has changed')
 
         # Create first relationship
         relationship = Relationship(label=edge_label,
                                     start_node=first_node,
                                     end_node=second_node)
+        first_node.add_relationship(relationship)
+        second_node.add_relationship(relationship)
+
         relationship = self.io_engine.insert_relationship(relationship)
         self.assertEqual(1, self.io_engine.get_stats()['RelationshipStorage'], 'Storage contains extra data')
 
@@ -208,7 +219,7 @@ class IOEngineCase(TestCase):
         edge_property = Property('How many years', 1)
         relationship.add_property(edge_property)
         # Update relationship with new property
-        relationship = self.io_engine.insert_relationship(relationship)
+        relationship = self.io_engine.update_relationship(relationship)
         self.assertEqual(1, self.io_engine.get_stats()['RelationshipStorage'], 'Storage contains extra data')
 
         retrieved_relationship = self.io_engine.select_relationship(relationship.get_id())
@@ -220,9 +231,6 @@ class IOEngineCase(TestCase):
                          'Relationship\'s label has changed')
         self.assertEqual('How many years', retrieved_relationship.get_first_property().get_key(),
                          'Incorrect property\'s key')
-        self.assertEqual(1, retrieved_relationship.get_first_property().get_value(), 'Incorrect property\'s value')
-        self.assertEqual(20, retrieved_relationship.get_end_node().get_properties()[1].get_value(),
+        self.assertEqual('1', retrieved_relationship.get_first_property().get_value(), 'Incorrect property\'s value')
+        self.assertEqual('20', retrieved_relationship.get_end_node().get_properties()[1].get_value(),
                          'Incorrect end node property\'s value')
-
-
-

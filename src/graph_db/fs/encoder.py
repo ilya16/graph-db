@@ -111,7 +111,7 @@ class RecordEncoder:
         return record
 
     @staticmethod
-    def encode_property(used: bool, key_id: int, value_id: int, next_prop_id: int = -1) -> Record:
+    def encode_property(used: bool, key_id: int, value_id: int, next_prop_id: int = INVALID_ID) -> Record:
         """
         Encodes property into a physical property record.
         Property record format:

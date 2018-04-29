@@ -1,19 +1,17 @@
-from typing import List
-
 from graph_db.engine.label import Label
+from graph_db.engine.types import INVALID_ID
 from .property import Property
 from .node import Node
 
 
 class Relationship:
     """ Relationship between two nodes in a Graph. """
-    #_properties: List[Property] = []
 
     def __init__(self,
                  label: Label,
                  start_node: Node,
                  end_node: Node,
-                 id: int = -1,
+                 id: int = INVALID_ID,
                  start_prev_rel: 'Relationship' = None,
                  start_next_rel: 'Relationship' = None,
                  end_prev_rel: 'Relationship' = None,

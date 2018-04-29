@@ -1,16 +1,17 @@
-from typing import List
+from typing import List, Union
 
 from .property import Property
-from graph_db.engine.types import DB_TYPE
+from graph_db.engine.types import DB_TYPE, INVALID_ID
 from .label import Label
 
 
 class Node:
     """ Node in a Graph. """
-    #_properties = []
-    #_relationships = []
 
-    def __init__(self, label: Label, id: int = -1, used: bool = True):
+    def __init__(self,
+                 label: Label,
+                 id: int = INVALID_ID,
+                 used: bool = True):
         self._properties = []
         self._relationships = []
         self._id = id
@@ -45,7 +46,7 @@ class Node:
     def get_properties(self) -> List[Property]:
         return self._properties
 
-    def get_first_property(self) -> Property:
+    def get_first_property(self) -> Union[Property, None]:
         if self._properties:
             return self._properties[0]
         else:
@@ -72,6 +73,3 @@ class Node:
                f'first_property: {self.get_first_property()}, ' \
                f'used: {self._used}' \
                f'}}'
-
-
-# f'first_relationship: {self.get_first_relationship()}, ' \
