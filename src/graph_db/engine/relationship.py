@@ -7,7 +7,7 @@ from .node import Node
 
 class Relationship:
     """ Relationship between two nodes in a Graph. """
-    _properties: List[Property] = []
+    #_properties: List[Property] = []
 
     def __init__(self,
                  label: Label,
@@ -19,6 +19,7 @@ class Relationship:
                  end_prev_rel: 'Relationship' = None,
                  end_next_rel: 'Relationship' = None,
                  used: bool = True):
+        self._properties: List[Property] = []
         self._id = id
         self._label = label
         self._start_node = start_node
