@@ -7,10 +7,12 @@ from .label import Label
 
 class Node:
     """ Node in a Graph. """
-    _properties = []
-    _relationships = []
+    #_properties = []
+    #_relationships = []
 
     def __init__(self, label: Label, id: int = -1, used: bool = True):
+        self._properties = []
+        self._relationships = []
         self._id = id
         self._label = label
         self._used = used
