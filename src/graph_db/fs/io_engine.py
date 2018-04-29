@@ -50,7 +50,6 @@ class IOEngine:
         if node.get_first_relationship():
             pass
 
-        print("asd")
         # TODO: PLEASE REFACTOR this BAD bad code below...
         if node.get_first_property():
              if len(node.get_properties()) > 1:
@@ -62,11 +61,9 @@ class IOEngine:
                      node.get_properties()[i-1].set_id(property.get_id())
                  property = self.insert_property(node.get_properties()[-1])
                  node.get_properties()[-1].set_id(property.get_id())
-                 print("aHUUSADADS")
              else:
                  property = self.insert_property(node.get_first_property())
                  node.get_first_property().set_id(property.get_id())
-                 print(node.get_first_property().get_value())
 
         node.set_id(node_id)
         node_record = RecordEncoder.encode_node(node)
@@ -97,7 +94,6 @@ class IOEngine:
                     used=node_data['used'])
 
         if node_data['first_prop_id'] != INVALID_ID:
-            print("hello")
             property = self.select_property(node_data['first_prop_id'])
             node.add_property(property)
             while property.get_next_property():
