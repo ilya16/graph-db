@@ -50,20 +50,23 @@ class IOEngine:
         if node.get_first_relationship():
             pass
 
+        print("asd")
         # TODO: PLEASE REFACTOR this BAD bad code below...
         if node.get_first_property():
-            if len(node.get_properties()) > 1:
-                for i in range(1, len(node.get_properties())):
-                    idx = self.get_stats()['PropertyStorage'] + 1  # next property id
-                    node.get_properties()[i].set_id(idx)
-                    node.get_properties()[i-1].set_next_property(node.get_properties()[i])
-                    property = self.insert_property(node.get_properties()[i-1])
-                    node.get_properties()[i-1].set_id(property.get_id())
-                property = self.insert_property(node.get_properties()[-1])
-                node.get_properties()[-1].set_id(property.get_id())
-            else:
-                property = self.insert_property(node.get_first_property())
-                node.get_first_property().set_id(property.get_id())
+             if len(node.get_properties()) > 1:
+                 for i in range(1, len(node.get_properties())):
+                     idx = self.get_stats()['PropertyStorage'] + 1  # next property id
+                     node.get_properties()[i].set_id(idx)
+                     node.get_properties()[i-1].set_next_property(node.get_properties()[i])
+                     property = self.insert_property(node.get_properties()[i-1])
+                     node.get_properties()[i-1].set_id(property.get_id())
+                 property = self.insert_property(node.get_properties()[-1])
+                 node.get_properties()[-1].set_id(property.get_id())
+                 print("aHUUSADADS")
+             else:
+                 property = self.insert_property(node.get_first_property())
+                 node.get_first_property().set_id(property.get_id())
+                 print(node.get_first_property().get_value())
 
         node.set_id(node_id)
         node_record = RecordEncoder.encode_node(node)
@@ -89,12 +92,20 @@ class IOEngine:
         # collecting data from other storages and building node
         node_label = self.select_label(node_data['label_id'])
 
-        # TODO: implement for property and relationships
-
-        # finally return node with all data
-        return Node(id=node_data['id'],
+        node = Node(id=node_data['id'],
                     label=node_label,
                     used=node_data['used'])
+
+        if node_data['first_prop_id'] != INVALID_ID:
+            print("hello")
+            property = self.select_property(node_data['first_prop_id'])
+            node.add_property(property)
+            while property.get_next_property():
+                property = property.get_next_property()
+                node.add_property(property)
+
+        # finally return node with all data
+        return node
 
     def update_node(self, node: Node):
         """
@@ -298,12 +309,16 @@ class IOEngine:
                 break
 
         # Collect next property
-        # next_property = self.select_property(property_data['next_prop_id'])
+        if property_data['next_prop_id'] != INVALID_ID:
+            next_property = self.select_property(property_data['next_prop_id'])
+        else:
+            next_property = None
 
         return Property(used=property_data['used'],
                         id=property_data['id'],
                         key=key,
-                        value=value)
+                        value=value,
+                        next_property=next_property)
 
     def update_property(self, prop: Property):
         pass
