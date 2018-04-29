@@ -67,11 +67,13 @@ class Worker:
         storage = self.stores[storage_type]
         storage.allocate_record()
 
-        record.set_index(self.stats[storage_type])
+        if record.idx == self.stats[storage_type]:
+            record.set_index(self.stats[storage_type])
         storage.write_record(record)
 
         # if ok:
-        self.stats[storage_type] += 1
+        if record.idx == self.stats[storage_type]:
+            self.stats[storage_type] += 1
 
     def read_record(self, record_id: int, storage_type: str):
         """

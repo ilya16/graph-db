@@ -1,5 +1,7 @@
 from graph_db.engine.graph import Graph
 from graph_db.access.parser import Parser
+import networkx as nx
+import matplotlib.pyplot as plt
 import os
 
 queries = [

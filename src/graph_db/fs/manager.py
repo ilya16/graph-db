@@ -61,11 +61,14 @@ class DBFSManager:
         """
         worker = self.workers[0]     # one local worker with storage
 
-        record.set_index(self.stats[storage_type])
+        if record.idx == self.stats[storage_type]:
+            record.set_index(self.stats[storage_type])
+
         worker.write_record(record, storage_type)
 
         # if ok:
-        self.stats[storage_type] += 1
+        if record.idx == self.stats[storage_type]:
+            self.stats[storage_type] += 1
 
     def read_record(self, record_id: int, storage_type: str):
         """

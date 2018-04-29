@@ -17,7 +17,7 @@ class ParserCase(TestCase):
             'MATCH edge: e',
             'CREATE node: Jack Animal:Dog',
             'CREATE node: Tom Animal:Cat',
-            'CREATE edge: catches FROM Jack TO Tom Durability:2'
+            'CREATE edge: catches FROM Jack TO Tom Durability:2',
             'CREATE edge: fights FROM Tom TO Jack Time:10'
     ]
 
@@ -72,13 +72,14 @@ class ParserCase(TestCase):
 
         # Node creation with the same 'Warrior' label
         self.graph = self.parser.parse_query(self.graph, self.queries[3])
-        self.assertEqual(4, self.graph.get_stats()['NodeStorage'], 'Storage contains extra data')
+        self.assertEqual(3, self.graph.get_stats()['NodeStorage'], 'Storage contains extra data')
 
         retrieved_node = self.graph.select_nth_node(2)
         self.assertEqual(2, retrieved_node.get_id(), 'Node id is incorrect')
 
         label = retrieved_node.get_label()
         self.assertEqual(0, label.get_id(), 'Label id is incorrect')
+        self.assertEqual(3, self.graph.get_stats()['LabelStorage'], 'Label storage contains extra data')
         self.assertEqual('Warrior', label.get_name(), 'Label name is incorrect')
 
         # Match nodes with 'Warrior' label
@@ -117,14 +118,14 @@ class ParserCase(TestCase):
         # Create edges with property
         self.graph = self.parser.parse_query(self.graph, self.queries[9])
         retrieved_edge = self.graph.select_nth_edge(1)
-        self.assertEqual(1, retrieved_node.get_id(), 'Edge id is incorrect')
+        self.assertEqual(1, retrieved_edge.get_id(), 'Edge id is incorrect')
         prop = retrieved_edge.get_first_property()
         self.assertEqual(prop._key, 'Durability', 'Key of property is incorrect')
         self.assertEqual(prop._value, '2', 'Value of property is incorrect')
 
         self.graph = self.parser.parse_query(self.graph, self.queries[10])
         retrieved_edge = self.graph.select_nth_edge(2)
-        self.assertEqual(2, retrieved_node.get_id(), 'Edge id is incorrect')
+        self.assertEqual(2, retrieved_edge.get_id(), 'Edge id is incorrect')
         prop = retrieved_edge.get_first_property()
         self.assertEqual(prop._key, 'Time', 'Key of property is incorrect')
         self.assertEqual(prop._value, '10', 'Value of property is incorrect')
