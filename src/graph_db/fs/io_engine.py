@@ -77,7 +77,6 @@ class IOEngine:
         Collects all data from other storages.
         :return:
         """
-
         try:
             node_record = self.dbfs_manager.read_record(node_id, 'NodeStorage')
             node_data = RecordDecoder.decode_node_record(node_record)
@@ -143,7 +142,22 @@ class IOEngine:
             end_node_record = RecordEncoder.encode_node(rel.get_end_node())
             self.dbfs_manager.write_record(end_node_record, 'NodeStorage')
 
-        # TODO: 1) Write properties of relationship
+        # TODO: PLEASE REFACTOR this BAD bad code below...
+        if rel.get_first_property():
+            if len(rel.get_properties()) > 1:
+                for i in range(1, len(rel.get_properties())):
+                    idx = self.get_stats()['PropertyStorage'] + 1  # next property id
+                    rel.get_properties()[i].set_id(idx)
+                    rel.get_properties()[i - 1].set_next_property(rel.get_properties()[i])
+                    property = self.insert_property(rel.get_properties()[i - 1])
+                    rel.get_properties()[i - 1].set_id(property.get_id())
+                property = self.insert_property(rel.get_properties()[-1])
+                rel.get_properties()[-1].set_id(property.get_id())
+            else:
+                print(rel.get_first_property().get_value())
+                property = self.insert_property(rel.get_first_property())
+                rel.get_first_property().set_id(property.get_id())
+
         rel.set_id(relationship_id)
         relationship_record = RecordEncoder.encode_relationship(rel)
         self.dbfs_manager.write_record(relationship_record, 'RelationshipStorage')
@@ -176,8 +190,7 @@ class IOEngine:
         # rel_end_prev = self.select_relationship(relationship_data['end_prev_id'])
         # rel_end_next = self.select_relationship(relationship_data['end_next_id'])
 
-        # finally return node with all data
-        return Relationship(id=relationship_data['id'],
+        relationship = Relationship(id=relationship_data['id'],
                             label=rel_label,
                             start_node=rel_start_node,
                             end_node=rel_end_node,
@@ -186,6 +199,17 @@ class IOEngine:
                             # end_prev_rel=rel_end_prev,
                             # end_next_rel=rel_end_next,
                             used=relationship_data['used'])
+
+        if relationship_data['first_prop_id'] != INVALID_ID:
+            property = self.select_property(relationship_data['first_prop_id'])
+            relationship.add_property(property)
+            while property.get_next_property():
+                property = property.get_next_property()
+                relationship.add_property(property)
+            print(relationship.get_first_property().get_value())
+
+        # finally return node with all data
+        return relationship
 
     def update_relationship(self, rel: Relationship):
         pass

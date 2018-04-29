@@ -19,7 +19,7 @@ class Relationship:
                  end_prev_rel: 'Relationship' = None,
                  end_next_rel: 'Relationship' = None,
                  used: bool = True):
-        self._properties: List[Property] = []
+        self._properties = []
         self._id = id
         self._label = label
         self._start_node = start_node
@@ -67,7 +67,7 @@ class Relationship:
         else:
             return None
 
-    def get_rel_properties(self):
+    def get_properties(self):
         return self._properties
 
     def get_first_property(self):
