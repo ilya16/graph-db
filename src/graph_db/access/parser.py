@@ -1,33 +1,73 @@
+from graph_db.engine.property import Property
+
 
 class Parser:
 
     def parse_query(self, graph, query):
+        properties = []
         query_type = query.split()[0]
+        query_len = len(query.split())
         if query_type == 'CREATE':
             creation_of = query.split()[1]
             if creation_of == 'node:':
                 node_label = query.split()[2]
-                if len(query.split()) <= 3:
-                    created_node = graph.create_node(label=node_label, key=None, value=None)
-                    print(created_node)
-                else:
-                    key, value = query.split()[3].split(':')
-                    created_node = graph.create_node(label=node_label, key=key, value=value)
-                    print(created_node)
+                if query_len > 3:
+                    if query_len >= 4:
+                        try:
+                            key, value = query.split()[3].split(':')
+                            properties.append(Property(key, value))
+                        except:
+                            print('Write properties as follows: key:value')
+                            return None
+                    if query_len >= 5:
+                        try:
+                            key, value = query.split()[4].split(':')
+                            properties.append(Property(key, value))
+                        except:
+                            print('Write properties as follows: key:value')
+                            return None
+                    if query_len >= 6:
+                        try:
+                            key, value = query.split()[5].split(':')
+                            properties.append(Property(key, value))
+                        except:
+                            print('Write properties as follows: key:value')
+                            return None
+                created_node = graph.create_node(label=node_label, properties=properties)
+                print(created_node)
+
             if creation_of == 'edge:':
                 edge_label = query.split()[2]
                 start_node = query.split()[4]
                 end_node = query.split()[6]
                 try:
-                    if len(query.split()) <= 7:
-                        created_edge = graph.create_edge(label=edge_label, start_node_label=start_node, end_node_label=end_node, key=None,
-                                          value=None)
-                        print(created_edge)
-                    else:
-                        key, value = query.split()[7].split(':')
-                        created_edge = graph.create_edge(label=edge_label, start_node_label=start_node, end_node_label=end_node, key=key,
-                                          value=value)
-                        print(created_edge)
+                    if query_len > 7:
+                        if query_len >= 8:
+                            try:
+                                key, value = query.split()[7].split(':')
+                                properties.append(Property(key, value))
+                            except:
+                                print('Write properties as follows: key:value')
+                                return None
+                        if query_len >= 9:
+                            try:
+                                key, value = query.split()[8].split(':')
+                                properties.append(Property(key, value))
+                            except:
+                                print('Write properties as follows: key:value')
+                                return None
+                        if query_len >= 10:
+                            try:
+                                key, value = query.split()[9].split(':')
+                                properties.append(Property(key, value))
+                            except:
+                                print('Write properties as follows: key:value')
+                                return None
+                    created_edge = graph.create_edge(label=edge_label,
+                                                     start_node_label=start_node,
+                                                     end_node_label=end_node,
+                                                     properties=properties)
+                    print(created_edge)
                 except:
                     print('Either you haven\'t created entered label or entered label is incorrect')
                     return None

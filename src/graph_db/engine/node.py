@@ -68,8 +68,16 @@ class Node:
         return self._used
 
     def __str__(self) -> str:
-        return f'Node #{self._id} = {{' \
-               f'label: {self._label.get_name()}, ' \
-               f'first_property: {self.get_first_property()}, ' \
-               f'used: {self._used}' \
-               f'}}'
+        prop = self.get_first_property()
+        if prop is None:
+            return f'Node #{self._id} = {{' \
+                   f'label: {self._label.get_name()}, ' \
+                   f'first_property: {None}, ' \
+                   f'used: {self._used}' \
+                   f'}}'
+        else:
+            return f'Node #{self._id} = {{' \
+                   f'label: {self._label.get_name()}, ' \
+                   f'first_property: {prop.get_key()}:{prop.get_value()}, ' \
+                   f'used: {self._used}' \
+                   f'}}'

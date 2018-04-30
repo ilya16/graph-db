@@ -105,10 +105,20 @@ class Relationship:
         return self._used
 
     def __str__(self) -> str:
-        return f'Edge #{self._id} = {{' \
-               f'label: {self._label.get_name()}, ' \
-               f'first_property: {self.get_first_property()}, ' \
-               f'start_node: {self.get_start_node()}, ' \
-               f'end_node: {self.get_end_node()}, ' \
-               f'used: {self._used}' \
-               f'}}'
+        prop = self.get_first_property()
+        if prop is None:
+            return f'Edge #{self._id} = {{' \
+                   f'label: {self._label.get_name()}, ' \
+                   f'first_property: {None}, ' \
+                   f'start_node: {self.get_start_node()}, ' \
+                   f'end_node: {self.get_end_node()}, ' \
+                   f'used: {self._used}' \
+                   f'}}'
+        else:
+            return f'Edge #{self._id} = {{' \
+                   f'label: {self._label.get_name()}, ' \
+                   f'first_property: {prop.get_key()}:{prop.get_value()}, ' \
+                   f'start_node: {self.get_start_node()}, ' \
+                   f'end_node: {self.get_end_node()}, ' \
+                   f'used: {self._used}' \
+                   f'}}'

@@ -17,6 +17,7 @@ class ConsoleReader:
         os.removedirs(self.temp_dir)
 
     def read_query(self):
+        print("Welcome to Graph DB. (c) Ilya Borovik, Artur Khayaliev, Boris Makaev")
         while True:
             user_input = input("\n")
             self.parser.parse_query(self.graph, user_input)
