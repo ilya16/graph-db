@@ -7,8 +7,9 @@ class ConsoleReader:
 
     def __init__(self):
         self.temp_dir = 'temp_db/'
-        self.graph = Graph('test_graph', temp_dir=self.temp_dir)
+        self.graph = None
         self.parser = Parser()
+        self.is_created = False
 
     def __del__(self):
         self.graph.close_engine()
@@ -21,21 +22,32 @@ class ConsoleReader:
         while True:
             user_input = input("\n")
             if len(user_input) != 0:
-                self.parser.parse_query(self.graph, user_input)
-                if 'create node' in user_input:
-                    print('To create a node:\n' +
-                          'CREATE node: label key:value')
-                if 'create edge' in user_input:
-                    print('To create an edge:\n' +
-                          'CREATE edge: label FROM node1 TO node2 key:value')
-                if 'match node' in user_input:
-                    print('To match a node:\n' +
-                          'MATCH node: label')
-                if 'match edge' in user_input:
-                    print('To match an edge:\n' +
-                          'MATCH edge: label')
-                if user_input == 'exit' or user_input == 'EXIT':
-                    break
+                if 'CREATE graph' not in user_input and self.is_created is False:
+                    print('You have to create a graph firstly using \'CREATE graph: label\'')
+                    continue
+                else:
+                    if self.is_created is False:
+                        self.is_created = True
+                        self.graph = self.parser.parse_query(None, user_input)
+                    else:
+                        if 'CREATE graph' in user_input:
+                            print("You have already created a graph called '" + self.graph.name + "'")
+                            continue
+                        self.parser.parse_query(self.graph, user_input)
+                        if 'create node' in user_input:
+                            print('To create a node:\n' +
+                                  'CREATE node: label key:value')
+                        if 'create edge' in user_input:
+                            print('To create an edge:\n' +
+                                  'CREATE edge: label FROM node1 TO node2 key:value')
+                        if 'match node' in user_input:
+                            print('To match a node:\n' +
+                                  'MATCH node: label')
+                        if 'match edge' in user_input:
+                            print('To match an edge:\n' +
+                                  'MATCH edge: label')
+                        if user_input == 'exit' or user_input == 'EXIT':
+                            break
 
 
 reader = ConsoleReader()

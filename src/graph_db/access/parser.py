@@ -1,4 +1,5 @@
 from graph_db.engine.property import Property
+from graph_db.engine.graph import Graph
 
 
 class Parser:
@@ -9,6 +10,10 @@ class Parser:
         query_len = len(query.split())
         if query_type == 'CREATE':
             creation_of = query.split()[1]
+            if creation_of == 'graph:':
+                graph_label = query.split()[2]
+                print("You have created '" + str(graph_label) + "' graph")
+                return Graph(graph_label, 'temp_db/')
             if creation_of == 'node:':
                 node_label = query.split()[2]
                 if query_len > 3:
