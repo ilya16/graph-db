@@ -15,6 +15,7 @@ class Graph:
         self.io_engine = IOEngine()
         self.io_engine.add_worker(temp_storage)
         self.ids_nodes = dict()
+        self.properties = dict()
         self.ids_edges = dict()
 
     def create_node(self, label, properties):
@@ -25,6 +26,10 @@ class Graph:
         if len(properties) != 0:
             for prop in properties:
                 node.add_property(prop)
+                if prop in self.properties:
+                    self.properties[prop].append(node)
+                else:
+                    self.properties[prop] = [node]
 
         inserted_node = self.io_engine.insert_node(node)
         if inserted_node.get_label().get_name() not in self.labels:
@@ -44,6 +49,10 @@ class Graph:
         if len(properties) != 0:
             for prop in properties:
                 edge.add_property(prop)
+                if prop in self.properties:
+                    self.properties[prop].append(edge)
+                else:
+                    self.properties[prop] = [edge]
 
         inserted_relationship = self.io_engine.insert_relationship(edge)
 
@@ -70,3 +79,29 @@ class Graph:
 
     def get_stats(self):
         return self.io_engine.get_stats()
+
+    # def select_with_condition(self, key, value, cond):
+    #     to_return = []
+    #     if cond == '=':
+    #         for prop in self.properties:
+    #             if self.properties[prop].get_ ==
+    #     elif cond == '>':
+    #
+    #     elif cond == '<':
+
+    def select_by_property(self, prop):
+        objects = []
+        for p in self.properties:
+            if p.get_key() == prop.get_key():
+                objects.append(self.properties[p])
+        return objects
+
+    def traverse_graph(self):
+        objects = []
+        for node in self.ids_nodes:
+            for n in self.ids_nodes[node]:
+                objects.append(n)
+        for edge in self.ids_edges:
+            for e in self.ids_edges[edge]:
+                objects.append(e)
+        return objects

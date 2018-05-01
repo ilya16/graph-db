@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt
 import os
 
 queries = [
-    'CREATE node: Warrior Animal:Dog',
-    'CREATE node: Node2 Age:2',
-    'CREATE edge: rel FROM Warrior TO Node2 Type:Human'
+    'CREATE node: Tom Animal:Cat',
+    'MATCH graph: graph',
+    'CREATE node: Cat',
+    'MATCH node: Cat'
 ]
 
 temp_dir = 'temp/'
@@ -18,9 +19,6 @@ graph = Graph('graph', temp_dir)
 for query in queries:
     graph = parser.parse_query(graph, query)
 
-node = graph.select_nth_node(1)
-print(node.get_first_property().get_key())
-print(node._label.get_name())
 # print(node.get_property_value('Animal'))
 
 # deleting created temp stores

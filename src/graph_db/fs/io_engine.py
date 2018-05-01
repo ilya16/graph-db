@@ -210,7 +210,7 @@ class IOEngine:
             while property.get_next_property():
                 property = property.get_next_property()
                 relationship.add_property(property)
-            print(relationship.get_first_property().get_value())
+            # print(relationship.get_first_property().get_value())
 
         # finally return node with all data
         return relationship

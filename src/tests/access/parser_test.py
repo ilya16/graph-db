@@ -20,7 +20,11 @@ class ParserCase(TestCase):
             'CREATE edge: catches FROM Jerry TO Tom Durability:2',
             'CREATE edge: fights FROM Tom TO Jerry Time:10',
             'CREATE node: system Type:PC CPU:Intel GPU:NVidia',
-            'CREATE edge: plays FROM Tom To system Since:2016 Game:MadMax'
+            'CREATE edge: plays FROM Tom To system Since:2016 Game:MadMax',
+            'MATCH graph: test_graph',
+            'CREATE node: boy Age:20 Sex:male',
+            'MATCH node: Age>15 Sex=male',
+            'MATCH node: Age=300 Sex=female'
     ]
 
     def setUp(self):
@@ -144,3 +148,7 @@ class ParserCase(TestCase):
         retrieved_edge = self.graph.select_nth_edge(3)
         self.assertEqual(2, len(retrieved_edge.get_properties()), 'Number of properties is incorrect')
         self.assertEqual('MadMax', retrieved_edge.get_properties()[1].get_value(), 'Retrieved value is incorrect')
+
+        # Graph traverse with MATCH graph: graph
+        objects = self.parser.parse_query(self.graph, self.queries[13])
+        self.assertEqual(10, len(objects), 'Number of objects in graph is incorrect')

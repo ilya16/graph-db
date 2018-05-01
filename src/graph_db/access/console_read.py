@@ -20,21 +20,22 @@ class ConsoleReader:
         print("Welcome to Graph DB. (c) Ilya Borovik, Artur Khayaliev, Boris Makaev")
         while True:
             user_input = input("\n")
-            self.parser.parse_query(self.graph, user_input)
-            if 'create node' in user_input:
-                print('To create a node:\n' +
-                      'CREATE node: label key:value')
-            if 'create edge' in user_input:
-                print('To create an edge:\n' +
-                      'CREATE edge: label FROM node1 TO node2 key:value')
-            if 'match node' in user_input:
-                print('To match a node:\n' +
-                      'MATCH node: label')
-            if 'match edge' in user_input:
-                print('To match an edge:\n' +
-                      'MATCH edge: label')
-            if user_input == 'exit' or user_input == 'EXIT':
-                break
+            if len(user_input) != 0:
+                self.parser.parse_query(self.graph, user_input)
+                if 'create node' in user_input:
+                    print('To create a node:\n' +
+                          'CREATE node: label key:value')
+                if 'create edge' in user_input:
+                    print('To create an edge:\n' +
+                          'CREATE edge: label FROM node1 TO node2 key:value')
+                if 'match node' in user_input:
+                    print('To match a node:\n' +
+                          'MATCH node: label')
+                if 'match edge' in user_input:
+                    print('To match an edge:\n' +
+                          'MATCH edge: label')
+                if user_input == 'exit' or user_input == 'EXIT':
+                    break
 
 
 reader = ConsoleReader()

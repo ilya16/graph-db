@@ -16,21 +16,21 @@ class Parser:
                         try:
                             key, value = query.split()[3].split(':')
                             properties.append(Property(key, value))
-                        except:
+                        except():
                             print('Write properties as follows: key:value')
                             return None
                     if query_len >= 5:
                         try:
                             key, value = query.split()[4].split(':')
                             properties.append(Property(key, value))
-                        except:
+                        except():
                             print('Write properties as follows: key:value')
                             return None
                     if query_len >= 6:
                         try:
                             key, value = query.split()[5].split(':')
                             properties.append(Property(key, value))
-                        except:
+                        except():
                             print('Write properties as follows: key:value')
                             return None
                 created_node = graph.create_node(label=node_label, properties=properties)
@@ -46,21 +46,21 @@ class Parser:
                             try:
                                 key, value = query.split()[7].split(':')
                                 properties.append(Property(key, value))
-                            except:
+                            except():
                                 print('Write properties as follows: key:value')
                                 return None
                         if query_len >= 9:
                             try:
                                 key, value = query.split()[8].split(':')
                                 properties.append(Property(key, value))
-                            except:
+                            except():
                                 print('Write properties as follows: key:value')
                                 return None
                         if query_len >= 10:
                             try:
                                 key, value = query.split()[9].split(':')
                                 properties.append(Property(key, value))
-                            except:
+                            except():
                                 print('Write properties as follows: key:value')
                                 return None
                     created_edge = graph.create_edge(label=edge_label,
@@ -68,23 +68,52 @@ class Parser:
                                                      end_node_label=end_node,
                                                      properties=properties)
                     print(created_edge)
-                except:
+                except():
                     print('Either you haven\'t created entered label or entered label is incorrect')
                     return None
             return graph
         elif query_type == 'MATCH':
             match_of = query.split()[1]
+            third_term = query.split()[2]
             try:
                 if match_of == 'node:':
-                    selected_nodes = graph.select_node_by_label(query.split()[2])
-                    for node in selected_nodes:
-                        print(node)
-                    return selected_nodes
+                    if '>' not in third_term and '<' not in third_term and '=' not in third_term:
+                        selected_nodes = graph.select_node_by_label(third_term)
+                        for node in selected_nodes:
+                            print(node)
+                        return selected_nodes
+                    else:
+                        if '>' in third_term:
+                            key, value = third_term.split('>')
+                            print(key, value)
+                        elif '<' in third_term:
+                            key, value = third_term.split('<')
+                            print(key, value)
+                        elif '=' in third_term:
+                            key, value = third_term.split('=')
+                            print(key, value)
+                        return None
                 if match_of == 'edge:':
-                    selected_edges = graph.select_edge_by_label(query.split()[2])
+                    selected_edges = graph.select_edge_by_label(third_term)
                     for edge in selected_edges:
                         print(edge)
                     return selected_edges
-            except:
+                if match_of == 'graph:':
+                    if third_term == graph.name:
+                        print('\nGraph: ' + str(graph.name))
+                        objects = graph.traverse_graph()
+                        for obj in objects:
+                            print(obj)
+                        return objects
+                    else:
+                        print("There is no such " + '"' + str(third_term) + '"' + " graph")
+                        return None
+                if match_of == 'property:':
+                    key, value = third_term.split(':')
+                    selected_by_property = graph.select_by_property(Property(key, value))
+                    for obj in selected_by_property:
+                        print(obj)
+                    return selected_by_property
+            except():
                 print('Either you haven\'t created entered label or entered label is incorrect')
                 return None
