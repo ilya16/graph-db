@@ -84,48 +84,26 @@ class IOEngine:
     def select_node(self, node_id: int):
         """
         Selects node with `id` from the appropriate storage.
-        Collects all data from other storages.
+        Collects all data from other stores.
+        :return:
+        """
+        node = self.collect_and_link_objects(node_id, type='Node')
+
+        return node
+
+    def _get_node_data(self, node_id: int):
+        """
+        Selects node with `id` from the appropriate storage.
+        Collects all data from other stores.
         :return:
         """
         try:
             node_record = self.dbfs_manager.read_record(node_id, 'NodeStorage')
-            node_data = RecordDecoder.decode_node_record(node_record)
+            return RecordDecoder.decode_node_record(node_record)
         except AssertionError as e:
             print(f'Error at Worker #0: {e}')
             # should be rethrown
             return None
-
-        # collecting data from other stores and building node
-        node_label = self.select_label(node_data['label_id'])
-
-        node = Node(id=node_data['id'],
-                    label=node_label,
-                    used=node_data['used'])
-
-        if node_data['first_rel_id'] != INVALID_ID:
-            node_rel = self.select_relationship(node_data['first_rel_id'])
-            node.add_relationship(node_rel)
-            while True:
-                if node_id == node_rel.get_start_node().get_id():
-                    node_rel = node_rel.get_start_next_rel()
-                    if node_rel is None:
-                        break
-                    node.add_relationship(node_rel)
-                elif node_id == node_rel.get_end_node().get_id():
-                    node_rel = node_rel.get_end_next_rel()
-                    if node_rel is None:
-                        break
-                    node.add_relationship(node_rel)
-
-        if node_data['first_prop_id'] != INVALID_ID:
-            node_property = self.select_property(node_data['first_prop_id'])
-            node.add_property(node_property)
-            while node_property.get_next_property():
-                node_property = node_property.get_next_property()
-                node.add_property(node_property)
-
-        # finally return node with all data
-        return node
 
     # Relationship
     def insert_relationship(self, rel: Relationship):
@@ -191,7 +169,7 @@ class IOEngine:
 
         return rel
 
-    def select_relationship(self, rel_id: int) -> Relationship:
+    def _get_relationship_data(self, rel_id: int):
         """
         Selects relationship with `id` from the appropriate storage.
         Collects all data from other storages.
@@ -199,43 +177,19 @@ class IOEngine:
         """
         try:
             relationship_record = self.dbfs_manager.read_record(rel_id, 'RelationshipStorage')
-            relationship_data = RecordDecoder.decode_relationship_record(relationship_record)
+            return RecordDecoder.decode_relationship_record(relationship_record)
         except AssertionError as e:
             print(f'Error at Worker #0: {e}')
             # should be rethrown
-            relationship_data = None
+            return None
 
-        # Below, we are collecting all relationship's data from storage
-        rel_start_node = self.select_node(relationship_data['start_node'])
-        rel_end_node = self.select_node(relationship_data['end_node'])
-
-        rel_label = self.select_label(relationship_data['label_id'])
-
-        # Here we run through all relations... This is kinda bad. I think so...
-        # rel_start_prev = self.select_relationship(relationship_data['start_prev_id'])
-        # rel_start_next = self.select_relationship(relationship_data['start_next_id'])
-        # rel_end_prev = self.select_relationship(relationship_data['end_prev_id'])
-        # rel_end_next = self.select_relationship(relationship_data['end_next_id'])
-
-        relationship = Relationship(id=relationship_data['id'],
-                            label=rel_label,
-                            start_node=rel_start_node,
-                            end_node=rel_end_node,
-                            # start_prev_rel=rel_start_prev,
-                            # start_next_rel=rel_start_next,
-                            # end_prev_rel=rel_end_prev,
-                            # end_next_rel=rel_end_next,
-                            used=relationship_data['used'])
-
-        if relationship_data['first_prop_id'] != INVALID_ID:
-            property = self.select_property(relationship_data['first_prop_id'])
-            relationship.add_property(property)
-            while property.get_next_property():
-                property = property.get_next_property()
-                relationship.add_property(property)
-            # print(relationship.get_first_property().get_value())
-
-        # finally return node with all data
+    def select_relationship(self, rel_id: int) -> Relationship:
+        """
+        Selects relationship with `id` from the appropriate storage.
+        Collects all data from other storages.
+        :return:
+        """
+        relationship = self.collect_and_link_objects(rel_id, type='Relationship')
         return relationship
 
     # Label
@@ -276,7 +230,7 @@ class IOEngine:
     def select_label(self, label_id: int) -> Label:
         """
         Selects label with `id` from the appropriate storage.
-        Collects all data from other storages.
+        Collects all data from other stores.
         :param label_id:
         :return:
         """
@@ -348,7 +302,7 @@ class IOEngine:
     def select_property(self, prop_id: int) -> Property:
         """
         Selects property with `id` from the appropriate storage.
-        Collects all data from other storages.
+        Collects all data from other stores.
         :param prop_id:
         :return:
         """
@@ -394,3 +348,111 @@ class IOEngine:
                         key=key,
                         value=value,
                         next_property=next_property)
+
+    # Data Collector and Linker
+    def collect_and_link_objects(self, entry_obj_id, type='Node'):
+        node_ids_to_read = set()
+        rel_ids_to_read = set()
+        label_ids_to_read = set()
+        property_ids_to_read = set()
+
+        nodes_data = {}
+        relationships_data = {}
+        nodes = {-1: None}
+        relationships = {-1: None}
+        labels = {-1: None}
+        first_properties = {-1: None}
+
+        if type == 'Node':
+            node_ids_to_read.add(entry_obj_id)
+        elif type == 'Relationship':
+            rel_ids_to_read.add(entry_obj_id)
+        else:
+            return None
+
+        while label_ids_to_read or node_ids_to_read or rel_ids_to_read or property_ids_to_read:
+            for label_id in label_ids_to_read:
+                labels[label_id] = self.select_label(label_id)
+            label_ids_to_read = set()
+
+            for prop_id in property_ids_to_read:
+                first_properties[prop_id] = self.select_property(prop_id)
+            property_ids_to_read = set()
+
+            for node_id in node_ids_to_read:
+                if node_id != INVALID_ID:
+                    node_data = self._get_node_data(node_id)
+                    nodes_data[node_id] = node_data
+                    nodes[node_id] = Node(id=node_id, used=node_data['used'])
+
+                    if node_data['first_rel_id'] not in relationships_data:
+                        rel_ids_to_read.add(node_data['first_rel_id'])
+
+                    if node_data['label_id'] not in labels:
+                        label_ids_to_read.add(node_data['label_id'])
+
+                    if node_data['first_prop_id'] not in first_properties:
+                        property_ids_to_read.add(node_data['first_prop_id'])
+            node_ids_to_read = set()
+
+            new_rel_ids = set()
+            for rel_id in rel_ids_to_read:
+                if rel_id != INVALID_ID and rel_id not in relationships_data:
+                    rel_data = self._get_relationship_data(rel_id)
+                    relationships_data[rel_id] = rel_data
+                    relationships[rel_id] = Relationship(id=rel_id, used=rel_data['used'])
+
+                    if rel_data['start_node'] not in relationships_data:
+                        node_ids_to_read.add(rel_data['start_node'])
+
+                    if rel_data['end_node'] not in relationships_data:
+                        node_ids_to_read.add(rel_data['end_node'])
+
+                    if rel_data['label_id'] not in labels:
+                        label_ids_to_read.add(rel_data['label_id'])
+
+                    if rel_data['start_prev_id'] not in relationships_data:
+                        new_rel_ids.add(rel_data['start_prev_id'])
+
+                    if rel_data['start_next_id'] not in relationships_data:
+                        new_rel_ids.add(rel_data['start_next_id'])
+
+                    if rel_data['end_prev_id'] not in relationships_data:
+                        new_rel_ids.add(rel_data['end_prev_id'])
+
+                    if rel_data['end_next_id'] not in relationships_data:
+                        new_rel_ids.add(rel_data['end_next_id'])
+
+                    if rel_data['first_prop_id'] not in first_properties:
+                        property_ids_to_read.add(rel_data['first_prop_id'])
+            rel_ids_to_read = new_rel_ids
+
+        for node_id in nodes:
+            if node_id != INVALID_ID:
+                node = nodes[node_id]
+                nodes_data = nodes_data[node_id]
+
+                node.set_label(labels[nodes_data['label_id']])
+                node.set_first_property(first_properties[nodes_data['first_prop_id']])
+                node.set_first_relationship(relationships[nodes_data['first_rel_id']])
+
+        for rel_id in relationships:
+            if rel_id != INVALID_ID:
+                rel = relationships[rel_id]
+                rel_data = relationships_data[rel_id]
+
+                rel.set_label(labels[rel_data['label_id']])
+                rel.set_start_node(nodes[rel_data['start_node']])
+                rel.set_end_node(nodes[rel_data['end_node']])
+
+                rel.set_start_prev_rel(nodes[rel_data['start_prev_id']])
+                rel.set_start_next_rel(nodes[rel_data['start_next_id']])
+                rel.set_end_prev_rel(nodes[rel_data['end_prev_id']])
+                rel.set_end_next_rel(nodes[rel_data['end_next_id']])
+
+                rel.set_first_property(first_properties[rel_data['first_prop_id']])
+
+        if type == 'Node':
+            return nodes[entry_obj_id]
+        elif type == 'Relationship':
+            return relationships[entry_obj_id]

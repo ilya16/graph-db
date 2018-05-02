@@ -1,3 +1,5 @@
+from typing import Union
+
 from graph_db.engine.label import Label
 from graph_db.engine.types import INVALID_ID
 from .property import Property
@@ -8,14 +10,15 @@ class Relationship:
     """ Relationship between two nodes in a Graph. """
 
     def __init__(self,
-                 label: Label,
-                 start_node: Node,
-                 end_node: Node,
+                 label: Label = None,
+                 start_node: Node = None,
+                 end_node: Node = None,
                  id: int = INVALID_ID,
                  start_prev_rel: 'Relationship' = None,
                  start_next_rel: 'Relationship' = None,
                  end_prev_rel: 'Relationship' = None,
                  end_next_rel: 'Relationship' = None,
+                 first_prop: Property = None,
                  used: bool = True):
         self._properties = []
         self._id = id
@@ -26,6 +29,7 @@ class Relationship:
         self._start_next_rel = start_next_rel
         self._end_prev_rel = end_prev_rel
         self._end_next_rel = end_next_rel
+        self._first_prop = first_prop
         self._used = used
 
     def set_id(self, id: int):
@@ -68,11 +72,11 @@ class Relationship:
     def get_properties(self):
         return self._properties
 
-    def get_first_property(self):
-        if self._properties:
-            return self._properties[0]
-        else:
-            return None
+    def get_first_property(self) -> Union[Property, None]:
+        return self._first_prop
+
+    def set_first_property(self, prop: Property):
+        self._first_prop = prop
 
     def set_start_prev_rel(self, start_prev_rel):
         self._start_prev_rel = start_prev_rel

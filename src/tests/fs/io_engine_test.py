@@ -92,8 +92,10 @@ class IOEngineCase(TestCase):
         relationship = Relationship(label=label_three,
                                     start_node=first_node,
                                     end_node=second_node)
-        #first_node.add_relationship(relationship)
-        #second_node.add_relationship(relationship)
+        first_node.add_relationship(relationship)
+        second_node.add_relationship(relationship)
+        first_node.set_first_relationship(relationship)
+        second_node.set_first_relationship(relationship)
 
         relationship = self.io_engine.insert_relationship(relationship)
         self.assertEqual(1, self.io_engine.get_stats()['RelationshipStorage'], 'Storage contains extra data')
@@ -180,7 +182,6 @@ class IOEngineCase(TestCase):
 
         # Update node with new properties
         first_node = self.io_engine.update_node(first_node)
-        print("ASDASDADS")
         retrieved_node = self.io_engine.select_node(first_node.get_id())
         self.assertEqual(0, retrieved_node.get_id(), 'Node id is incorrect')
         self.assertEqual('Robin', retrieved_node.get_first_property().get_value(), 'Value of first property has changed')

@@ -9,13 +9,17 @@ class Node:
     """ Node in a Graph. """
 
     def __init__(self,
-                 label: Label,
+                 label: Label = None,
                  id: int = INVALID_ID,
+                 first_prop: Property = None,
+                 first_rel=None,
                  used: bool = True):
         self._properties = []
         self._relationships = []
         self._id = id
         self._label = label
+        self._first_prop = first_prop
+        self._first_rel = first_rel
         self._used = used
 
     def set_id(self, id: int):
@@ -29,6 +33,12 @@ class Node:
 
     def set_label(self, label: Label):
         self._label = label
+
+    def get_first_property(self) -> Union[Property, None]:
+        return self._first_prop
+
+    def set_first_property(self, prop: Property):
+        self._first_prop = prop
 
     def add_property(self, prop: Property):
         self._properties.append(prop)
@@ -46,20 +56,14 @@ class Node:
     def get_properties(self) -> List[Property]:
         return self._properties
 
-    def get_first_property(self) -> Union[Property, None]:
-        if self._properties:
-            return self._properties[0]
-        else:
-            return None
-
     def get_relationships(self):
         return self._relationships
 
     def get_first_relationship(self):
-        if self._relationships:
-            return self._relationships[0]
-        else:
-            return None
+        return self._first_rel
+
+    def set_first_relationship(self, rel):
+        self._first_rel = rel
 
     def add_relationship(self, rel):
         return self._relationships.append(rel)

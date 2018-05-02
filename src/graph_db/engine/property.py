@@ -1,4 +1,4 @@
-from graph_db.engine.types import DB_TYPE, INVALID_ID
+from graph_db.engine.types import INVALID_ID, DB_TYPE
 
 
 class Property:
@@ -45,3 +45,6 @@ class Property:
 
     def get_next_property(self):
         return self._next_property
+
+    def __str__(self) -> str:
+        return f'{self._key}:{self._value}'
