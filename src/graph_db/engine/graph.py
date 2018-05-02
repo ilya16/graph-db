@@ -1,7 +1,6 @@
 from graph_db.engine.label import Label
 from graph_db.engine.relationship import Relationship
 from graph_db.engine.node import Node
-from graph_db.engine.property import Property
 from graph_db.fs.io_engine import IOEngine
 from graph_db.fs.worker import Worker
 
@@ -11,9 +10,9 @@ class Graph:
     def __init__(self, name, temp_dir):
         temp_storage = Worker(base_path=temp_dir)
         self.name = name
-        self.labels = {}
         self.io_engine = IOEngine()
         self.io_engine.add_worker(temp_storage)
+        self.labels = {}
         self.ids_nodes = dict()
         self.properties = dict()
         self.ids_edges = dict()
@@ -26,10 +25,12 @@ class Graph:
         if len(properties) != 0:
             for prop in properties:
                 node.add_property(prop)
-                if prop in self.properties:
-                    self.properties[prop].append(node)
+                p = {prop.get_key(): prop.get_value()}
+                key = frozenset(p.items())
+                if key in self.properties:
+                    self.properties[key].append(node)
                 else:
-                    self.properties[prop] = [node]
+                    self.properties[key] = [node]
 
         inserted_node = self.io_engine.insert_node(node)
         if inserted_node.get_label().get_name() not in self.labels:
@@ -80,20 +81,22 @@ class Graph:
     def get_stats(self):
         return self.io_engine.get_stats()
 
-    # def select_with_condition(self, key, value, cond):
-    #     to_return = []
-    #     if cond == '=':
-    #         for prop in self.properties:
-    #             if self.properties[prop].get_ ==
-    #     elif cond == '>':
-    #
-    #     elif cond == '<':
-
-    def select_by_property(self, prop):
+    def select_with_condition(self, key, value, cond):
         objects = []
-        for p in self.properties:
-            if p.get_key() == prop.get_key():
-                objects.append(self.properties[p])
+        for prop in self.properties:
+            prop_key = list(prop)[0][0]
+            prop_value = list(prop)[0][1]
+            if key == prop_key:
+                if cond == '=' and prop_value == value:
+                    objects.append(self.properties[prop])
+                elif cond == '>' and int(prop_value) > int(value):
+                    objects.append(self.properties[prop])
+                elif cond == '<' and int(prop_value) < int(value):
+                    objects.append(self.properties[prop])
+                elif cond == '>=' and int(prop_value) >= int(value):
+                    objects.append(self.properties[prop])
+                elif cond == '<=' and int(prop_value) <= int(value):
+                    objects.append(self.properties[prop])
         return objects
 
     def traverse_graph(self):
