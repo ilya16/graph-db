@@ -14,7 +14,6 @@ class Node:
                  first_prop: Property = None,
                  first_rel=None,
                  used: bool = True):
-        self._properties = []
         self._relationships = []
         self._id = id
         self._label = label
@@ -40,24 +39,24 @@ class Node:
     def set_first_property(self, prop: Property):
         self._first_prop = prop
 
-    def add_property(self, prop: Property):
-        self._properties.append(prop)
-
-    def get_property_value(self, key: DB_TYPE) -> DB_TYPE:
-        if any(key in d.key for d in self._properties):
-            for prop in self._properties:
-                try:
-                    return prop.key
-                except KeyError:
-                    continue
-        else:
-            return None
-
-    def get_properties(self) -> List[Property]:
-        return self._properties
-
-    def get_relationships(self):
-        return self._relationships
+    # def add_property(self, prop: Property):
+    #     self._properties.append(prop)
+    #
+    # def get_property_value(self, key: DB_TYPE) -> DB_TYPE:
+    #     if any(key in d.key for d in self._properties):
+    #         for prop in self._properties:
+    #             try:
+    #                 return prop.key
+    #             except KeyError:
+    #                 continue
+    #     else:
+    #         return None
+    #
+    # def get_properties(self) -> List[Property]:
+    #     return self._properties
+    #
+    # def get_relationships(self):
+    #     return self._relationships
 
     def get_first_relationship(self):
         return self._first_rel
@@ -67,6 +66,9 @@ class Node:
 
     def add_relationship(self, rel):
         return self._relationships.append(rel)
+
+    def get_relationships(self):
+        return self._relationships
 
     def set_used(self, used: bool):
         self._used = used

@@ -20,7 +20,7 @@ class Relationship:
                  end_next_rel: 'Relationship' = None,
                  first_prop: Property = None,
                  used: bool = True):
-        self._properties = []
+        # self._properties = []
         self._id = id
         self._label = label
         self._start_node = start_node
@@ -56,21 +56,21 @@ class Relationship:
     def set_label(self, label: Label):
         self._label = label
 
-    def add_property(self, prop: Property):
-        self._properties.append(prop)
-
-    def get_rel_property_value(self, key):
-        if any(key in p.get_key() for p in self._properties):
-            for prop in self._properties:
-                try:
-                    return prop.get_key()
-                except KeyError:
-                    continue
-        else:
-            return None
-
-    def get_properties(self):
-        return self._properties
+    # def add_property(self, prop: Property):
+    #     self._properties.append(prop)
+    #
+    # def get_rel_property_value(self, key):
+    #     if any(key in p.get_key() for p in self._properties):
+    #         for prop in self._properties:
+    #             try:
+    #                 return prop.get_key()
+    #             except KeyError:
+    #                 continue
+    #     else:
+    #         return None
+    #
+    # def get_properties(self):
+    #     return self._properties
 
     def get_first_property(self) -> Union[Property, None]:
         return self._first_prop
