@@ -52,6 +52,9 @@ class Node:
         else:
             return None
 
+    def get_relationships(self):
+        return self._relationships
+
     def get_first_relationship(self):
         if self._relationships:
             return self._relationships[0]

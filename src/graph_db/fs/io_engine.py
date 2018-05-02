@@ -64,19 +64,17 @@ class IOEngine:
             label = self.insert_label(node.get_label())
             node.set_label(label)  # Update label
 
-        if node.get_first_relationship():
-            pass
+        if not update:
+            first_property_id = self.get_stats()['PropertyStorage']
+            for i in range(len(node.get_properties())):
+                node.get_properties()[i].set_id(first_property_id + i)
+                try:
+                    node.get_properties()[i].set_next_property(node.get_properties()[i + 1])
+                except IndexError:
+                    pass
 
-        first_property_id = self.get_stats()['PropertyStorage']
-        for i in range(len(node.get_properties())):
-            node.get_properties()[i].set_id(first_property_id + i)
-            try:
-                node.get_properties()[i].set_next_property(node.get_properties()[i + 1])
-            except IndexError:
-                pass
-
-        for i in range(len(node.get_properties())):
-            self.insert_property(node.get_properties()[i])
+            for i in range(len(node.get_properties())):
+                self.insert_property(node.get_properties()[i])
 
         node_record = RecordEncoder.encode_node(node)
         self.dbfs_manager.write_record(node_record, 'NodeStorage', update=update)
@@ -104,6 +102,21 @@ class IOEngine:
                     label=node_label,
                     used=node_data['used'])
 
+        if node_data['first_rel_id'] != INVALID_ID:
+            node_rel = self.select_relationship(node_data['first_rel_id'])
+            node.add_relationship(node_rel)
+            while True:
+                if node_id == node_rel.get_start_node().get_id():
+                    node_rel = node_rel.get_start_next_rel()
+                    if node_rel is None:
+                        break
+                    node.add_relationship(node_rel)
+                elif node_id == node_rel.get_end_node().get_id():
+                    node_rel = node_rel.get_end_next_rel()
+                    if node_rel is None:
+                        break
+                    node.add_relationship(node_rel)
+
         if node_data['first_prop_id'] != INVALID_ID:
             node_property = self.select_property(node_data['first_prop_id'])
             node.add_property(node_property)
@@ -115,7 +128,6 @@ class IOEngine:
         return node
 
     # Relationship
-
     def insert_relationship(self, rel: Relationship):
         """
         Updates relationship record in node storage.
@@ -143,25 +155,36 @@ class IOEngine:
             rel.set_label(label)  # Update label
 
         # Update start node if this relation is first for start node
-        if rel.get_start_node().get_first_relationship() == rel:
-            start_node_record = RecordEncoder.encode_node(rel.get_start_node())
-            self.dbfs_manager.write_record(start_node_record, 'NodeStorage')
+        if rel.get_start_node().get_first_relationship() is None:
+            rel.get_start_node().add_relationship(rel)
+            self.update_node(rel.get_start_node())
+        else:
+            # If there are previous relationships - update dependency fields
+            rel.get_start_node().get_relationships()[-1].set_start_next_rel(rel)
+            self.update_relationship(rel.get_start_node().get_relationships()[-1])
+            rel.set_end_prev_rel(rel.get_start_node().get_relationships()[-1])
 
         # Update end node if this relation is first for end node
-        if rel.get_end_node().get_first_relationship() == rel:
-            end_node_record = RecordEncoder.encode_node(rel.get_end_node())
-            self.dbfs_manager.write_record(end_node_record, 'NodeStorage')
+        if rel.get_end_node().get_first_relationship() is None:
+            rel.get_end_node().add_relationship(rel)
+            self.update_node(rel.get_end_node())
+        else:
+            # If there are previous relationships - update dependency fields
+            rel.get_end_node().get_relationships()[-1].set_end_next_rel(rel)
+            self.update_relationship(rel.get_end_node().get_relationships()[-1])
+            rel.set_end_prev_rel(rel.get_end_node().get_relationships()[-1])
 
-        first_property_id = self.get_stats()['PropertyStorage']
-        for i in range(len(rel.get_properties())):
-            rel.get_properties()[i].set_id(first_property_id + i)
-            try:
-                rel.get_properties()[i].set_next_property(rel.get_properties()[i + 1])
-            except IndexError:
-                pass
+        if not update:
+            first_property_id = self.get_stats()['PropertyStorage']
+            for i in range(len(rel.get_properties())):
+                rel.get_properties()[i].set_id(first_property_id + i)
+                try:
+                    rel.get_properties()[i].set_next_property(rel.get_properties()[i + 1])
+                except IndexError:
+                    pass
 
-        for i in range(len(rel.get_properties())):
-            self.insert_property(rel.get_properties()[i])
+            for i in range(len(rel.get_properties())):
+                self.insert_property(rel.get_properties()[i])
 
         relationship_record = RecordEncoder.encode_relationship(rel)
         self.dbfs_manager.write_record(relationship_record, 'RelationshipStorage', update=update)

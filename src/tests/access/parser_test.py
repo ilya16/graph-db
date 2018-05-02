@@ -146,12 +146,15 @@ class ParserCase(TestCase):
         self.assertEqual('CPU', retrieved_node.get_properties()[1].get_key(), 'Retrieved key is incorrect')
         self.assertEqual('NVidia', retrieved_node.get_properties()[2].get_value(), 'Retrieved value is incorrect')
 
+
         # Create an edge with multiple properties
         self.graph = self.parser.parse_query(self.graph, self.queries[13])
         retrieved_edge = self.graph.select_nth_edge(3)
         self.assertEqual(2, len(retrieved_edge.get_properties()), 'Number of properties is incorrect')
         self.assertEqual('MadMax', retrieved_edge.get_properties()[1].get_value(), 'Retrieved value is incorrect')
+        self.assertEqual(9, self.graph.io_engine.get_stats()['PropertyStorage'], 'Incorrect number of properties')
 
         # Graph traverse with MATCH graph: graph
         objects = self.parser.parse_query(self.graph, self.queries[14])
         self.assertEqual(10, len(objects), 'Number of objects in graph is incorrect')
+
