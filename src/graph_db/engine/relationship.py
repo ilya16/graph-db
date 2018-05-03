@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, List
 
 from graph_db.engine.label import Label
 from graph_db.engine.types import INVALID_ID
@@ -10,17 +10,16 @@ class Relationship:
     """ Relationship between two nodes in a Graph. """
 
     def __init__(self,
-                 label: Label = None,
-                 start_node: Node = None,
-                 end_node: Node = None,
+                 label: Label,
+                 start_node: Node,
+                 end_node: Node,
                  id: int = INVALID_ID,
                  start_prev_rel: 'Relationship' = None,
                  start_next_rel: 'Relationship' = None,
                  end_prev_rel: 'Relationship' = None,
                  end_next_rel: 'Relationship' = None,
-                 first_prop: Property = None,
+                 properties: List[Property] = list(),
                  used: bool = True):
-        # self._properties = []
         self._id = id
         self._label = label
         self._start_node = start_node
@@ -29,8 +28,41 @@ class Relationship:
         self._start_next_rel = start_next_rel
         self._end_prev_rel = end_prev_rel
         self._end_next_rel = end_next_rel
-        self._first_prop = first_prop
+        self._properties = properties
         self._used = used
+
+        self._init_properties()
+        self._init_dependencies()
+
+    def _init_properties(self):
+        for i in range(len(self._properties) - 1):
+            self._properties[i].set_next_property(self._properties[i + 1])
+
+    def _init_dependencies(self):
+        start_node = self._start_node
+        end_node = self._end_node
+
+        start_node_prev_rel = start_node.get_last_relationship()
+        if start_node_prev_rel:
+            assert start_node == start_node_prev_rel.get_start_node() \
+                   or start_node == start_node_prev_rel.get_end_node()
+            if start_node == start_node_prev_rel.get_start_node():
+                start_node_prev_rel.set_start_next_rel(self)
+            else:
+                start_node_prev_rel.set_end_next_rel(self)
+            self.set_start_prev_rel(start_node_prev_rel)
+        start_node.add_relationship(self)
+
+        end_node_prev_rel = end_node.get_last_relationship()
+        if end_node_prev_rel:
+            assert start_node == end_node_prev_rel.get_start_node() \
+                   or start_node == end_node_prev_rel.get_end_node()
+            if start_node == end_node_prev_rel.get_start_node():
+                end_node_prev_rel.set_start_next_rel(self)
+            else:
+                end_node_prev_rel.set_end_next_rel(self)
+            self.set_end_prev_rel(end_node_prev_rel)
+        end_node.add_relationship(self)
 
     def set_id(self, id: int):
         self._id = id
@@ -38,14 +70,8 @@ class Relationship:
     def get_id(self) -> int:
         return self._id
 
-    def set_start_node(self, start_node: Node):
-        self._start_node = start_node
-
     def get_start_node(self) -> Node:
         return self._start_node
-
-    def set_end_node(self, end_node: Node):
-        self._end_node = end_node
 
     def get_end_node(self) -> Node:
         return self._end_node
@@ -56,27 +82,19 @@ class Relationship:
     def set_label(self, label: Label):
         self._label = label
 
-    # def add_property(self, prop: Property):
-    #     self._properties.append(prop)
-    #
-    # def get_rel_property_value(self, key):
-    #     if any(key in p.get_key() for p in self._properties):
-    #         for prop in self._properties:
-    #             try:
-    #                 return prop.get_key()
-    #             except KeyError:
-    #                 continue
-    #     else:
-    #         return None
-    #
-    # def get_properties(self):
-    #     return self._properties
+    def add_property(self, prop: Property):
+        if self._properties:
+            self.get_last_property().set_next_property(prop)
+        self._properties.append(prop)
+
+    def get_properties(self) -> List[Property]:
+        return self._properties
 
     def get_first_property(self) -> Union[Property, None]:
-        return self._first_prop
+        return self._properties[0] if self._properties else None
 
-    def set_first_property(self, prop: Property):
-        self._first_prop = prop
+    def get_last_property(self) -> Union[Property, None]:
+        return self._properties[-1] if self._properties else None
 
     def set_start_prev_rel(self, start_prev_rel):
         self._start_prev_rel = start_prev_rel
@@ -109,20 +127,10 @@ class Relationship:
         return self._used
 
     def __str__(self) -> str:
-        prop = self.get_first_property()
-        if prop is None:
-            return f'Edge #{self._id} = {{' \
-                   f'label: {self._label.get_name()}, ' \
-                   f'first_property: {None}, ' \
-                   f'start_node: {self.get_start_node()}, ' \
-                   f'end_node: {self.get_end_node()}, ' \
-                   f'used: {self._used}' \
-                   f'}}'
-        else:
-            return f'Edge #{self._id} = {{' \
-                   f'label: {self._label.get_name()}, ' \
-                   f'first_property: {prop.get_key()}:{prop.get_value()}, ' \
-                   f'start_node: {self.get_start_node()}, ' \
-                   f'end_node: {self.get_end_node()}, ' \
-                   f'used: {self._used}' \
-                   f'}}'
+        return f'Edge #{self._id} = {{' \
+               f'label: {self._label}, ' \
+               f'first_property: {self.get_first_property()}, ' \
+               f'start_node: {self.get_start_node()}, ' \
+               f'end_node: {self.get_end_node()}, ' \
+               f'used: {self._used}' \
+               f'}}'

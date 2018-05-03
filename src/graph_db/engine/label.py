@@ -29,3 +29,6 @@ class Label:
 
     def is_used(self) -> bool:
         return self._used
+
+    def __str__(self) -> str:
+        return f'{self._name}'

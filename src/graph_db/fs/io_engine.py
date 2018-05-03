@@ -57,6 +57,9 @@ class IOEngine:
         Prepares node record and selects appropriate node storage.
         :param node:    node object
         """
+        if node.get_id() == INVALID_ID:
+            node.set_id(self.get_stats()['NodeStorage'])
+
         node_record = RecordEncoder.encode_node(node)
         self.dbfs_manager.write_record(node_record, 'NodeStorage', update=update)
 
@@ -97,6 +100,9 @@ class IOEngine:
         Prepares relationship records and select appropriate relationship storage.
         :param rel:    node object
         """
+        if rel.get_id() == INVALID_ID:
+            rel.set_id(self.get_stats()['RelationshipStorage'])
+
         relationship_record = RecordEncoder.encode_relationship(rel)
         self.dbfs_manager.write_record(relationship_record, 'RelationshipStorage', update=update)
 
@@ -137,14 +143,13 @@ class IOEngine:
         Prepares label record and select appropriate label storage.
         :param label: label object
         """
-        first_dynamic_id = self.get_stats()['DynamicStorage']
+        if label.get_id() == INVALID_ID:
+            label.set_id(self.get_stats()['LabelStorage'])
 
-        dynamic_records = RecordEncoder.encode_dynamic_data(label.get_name(), first_dynamic_id)
+        dynamic_id = self.get_stats()['DynamicStorage']
+        self._write_dynamic_data(label.get_name(), dynamic_id)
 
-        for record in dynamic_records:
-            self.dbfs_manager.write_record(record, 'DynamicStorage')
-
-        label_record = RecordEncoder.encode_label(label, first_dynamic_id)
+        label_record = RecordEncoder.encode_label(label, dynamic_id)
         self.dbfs_manager.write_record(label_record, 'LabelStorage', update=update)
 
         return label
@@ -159,21 +164,8 @@ class IOEngine:
         label_record = self.dbfs_manager.read_record(label_id, 'LabelStorage')
         label_data = RecordDecoder.decode_label_record(label_record)
 
-        if label_data:
-            label_name = ''
-            dynamic_id = label_data['dynamic_id']
-
-            while True:
-                # read from dynamic storage until all data is collected
-                dynamic_record = self.dbfs_manager.read_record(dynamic_id, 'DynamicStorage')
-                dynamic_data = RecordDecoder.decode_dynamic_data_record(dynamic_record)
-
-                label_name += dynamic_data['data']
-                dynamic_id = dynamic_data['next_chunk_id']
-
-                if dynamic_id == INVALID_ID:
-                    label_data['label_name'] = label_name
-                    return label_data
+        label_data['label_name'] = self._build_dynamic_data(label_data['dynamic_id'])
+        return label_data
 
     # Property
 
@@ -200,21 +192,34 @@ class IOEngine:
         if prop.get_id() == INVALID_ID:
             prop.set_id(self.get_stats()['PropertyStorage'])
 
-        # encode key
-        key_dynamic_id = self.get_stats()['DynamicStorage']
-        key_dynamic_records = RecordEncoder.encode_dynamic_data(prop.get_key(), key_dynamic_id)
-        for record in key_dynamic_records:
-            self.dbfs_manager.write_record(record, 'DynamicStorage')
+        if update:
+            old_property_record = self.dbfs_manager.read_record(prop.get_id(), 'PropertyStorage')
+            old_property_data = RecordDecoder.decode_property_record(old_property_record)
 
-        # encode value
-        value_dynamic_id = self.get_stats()['DynamicStorage']
-        value_dynamic_records = RecordEncoder.encode_dynamic_data(prop.get_value(), value_dynamic_id)
-        for record in value_dynamic_records:
-            self.dbfs_manager.write_record(record, 'DynamicStorage')
+            key_dynamic_id = old_property_data['key_id']
+            value_dynamic_id = old_property_data['value_id']
+
+            old_key = self._build_dynamic_data(key_dynamic_id)
+            old_value = self._build_dynamic_data(value_dynamic_id)
+
+            if old_key != prop.get_key():
+                # key has changed
+                key_dynamic_id = self.get_stats()['DynamicStorage']
+                self._write_dynamic_data(prop.get_key(), key_dynamic_id)
+            elif old_value != prop.get_key():
+                # value has changed
+                value_dynamic_id = self.get_stats()['DynamicStorage']
+                self._write_dynamic_data(prop.get_value(), value_dynamic_id)
+        else:
+            key_dynamic_id = self.get_stats()['DynamicStorage']
+            self._write_dynamic_data(prop.get_key(), key_dynamic_id)
+            value_dynamic_id = self.get_stats()['DynamicStorage']
+            self._write_dynamic_data(prop.get_value(), value_dynamic_id)
 
         next_prop_id = prop.get_next_property().get_id() if prop.get_next_property() else INVALID_ID
 
-        property_record = RecordEncoder.encode_property(used=prop.is_used(),
+        property_record = RecordEncoder.encode_property(prop_id=prop.get_id(),
+                                                        used=prop.is_used(),
                                                         key_id=key_dynamic_id,
                                                         value_id=value_dynamic_id,
                                                         next_prop_id=next_prop_id)
@@ -232,34 +237,28 @@ class IOEngine:
         property_record = self.dbfs_manager.read_record(prop_id, 'PropertyStorage')
         property_data = RecordDecoder.decode_property_record(property_record)
 
-        # Collect key: string now only
-        key = ''
-        key_id = property_data['key_id']
-        while True:
-            # read from dynamic storage until all data is collected
-            dynamic_record = self.dbfs_manager.read_record(key_id, 'DynamicStorage')
-            dynamic_data = RecordDecoder.decode_dynamic_data_record(dynamic_record)
+        # String data now only
+        property_data['key'] = self._build_dynamic_data(property_data['key_id'])
+        property_data['value'] = self._build_dynamic_data(property_data['value_id'])
 
-            key += dynamic_data['data']
-            key_id = dynamic_data['next_chunk_id']
-
-            if key_id == INVALID_ID:
-                break
-
-        # Collect value: string now only
-        value = ''
-        value_id = property_data['value_id']
-        while True:
-            # read from dynamic storage until all data is collected
-            dynamic_record = self.dbfs_manager.read_record(value_id, 'DynamicStorage')
-            dynamic_data = RecordDecoder.decode_dynamic_data_record(dynamic_record)
-
-            value += dynamic_data['data']
-            value_id = dynamic_data['next_chunk_id']
-
-            if value_id == INVALID_ID:
-                break
-
-        property_data['key'] = key
-        property_data['value'] = value
         return property_data
+
+    def _write_dynamic_data(self, data, dynamic_id):
+        dynamic_records = RecordEncoder.encode_dynamic_data(data, dynamic_id)
+        for record in dynamic_records:
+            self.dbfs_manager.write_record(record, 'DynamicStorage')
+
+    def _build_dynamic_data(self, dynamic_id):
+        data = ''
+        while True:
+            # read from dynamic storage until all data is collected
+            dynamic_record = self.dbfs_manager.read_record(dynamic_id, 'DynamicStorage')
+            dynamic_data = RecordDecoder.decode_dynamic_data_record(dynamic_record)
+
+            data += dynamic_data['data']
+            dynamic_id = dynamic_data['next_chunk_id']
+
+            if dynamic_id == INVALID_ID:
+                break
+
+        return data

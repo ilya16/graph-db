@@ -1,3 +1,5 @@
+from typing import Union, List
+
 from graph_db.engine.label import Label
 from graph_db.engine.relationship import Relationship
 from graph_db.engine.node import Node
@@ -23,84 +25,90 @@ class Graph:
         self.properties = dict()
         self.ids_edges = dict()
 
-    def create_node(self, label_name, properties=list()):
+    def create_node(self, label_name: str, properties=list()):
         self.insert_node(label_name, properties)
 
-    def create_edge(self, label_name, start_node, end_node, properties=list()):
+    def create_edge(self, label_name: str, start_node: Node, end_node: Node, properties=list()):
         self.insert_relationship(label_name, start_node, end_node, properties)
 
-    def insert_node(self, label_name, properties=list()):
-        node_id = self.get_stats()['NodeStorage']
-        node = Node(id=node_id)
+    def create_property(self, obj: Union[Node, Relationship], prop: Property):
+        self.insert_property(obj, prop)
 
+    def insert_node(self, label_name, properties=list()) -> Node:
         # label
         label = self._insert_label(label_name)
-        node.set_label(label)
+
+        # node itself
+        node = Node(label=label, properties=properties)
+
+        # properties
+        self._insert_properties(properties)
+
+        node = self.io_engine.insert_node(node)
 
         if label in self.ids_nodes:
             self.ids_nodes[label].append(node)
         else:
             self.ids_nodes[label] = [node]
 
-        # properties
-        if properties:
-            first_property = self._insert_properties(properties)
-            node.set_first_property(first_property)
-
-        # node itself
-        node = self.io_engine.insert_node(node)
-        self.nodes[node_id] = node
+        self.nodes[node.get_id()] = node
 
         return node
 
-    def insert_relationship(self, label_name, start_node, end_node, properties=list()):
-        rel_id = self.get_stats()['RelationshipStorage']
-        rel = Relationship(id=rel_id, start_node=start_node, end_node=end_node)
-
+    def insert_relationship(self, label_name: str, start_node: Node, end_node: Node, properties=list()) -> Relationship:
         # label
         label = self._insert_label(label_name)
-        rel.set_label(label)
+
+        # relationship itself
+        rel = Relationship(label=label,
+                           start_node=start_node,
+                           end_node=end_node,
+                           properties=properties)
+
+        # properties
+        self._insert_properties(properties)
+
+        rel = self.io_engine.insert_relationship(rel)
+
+        # updating start/end nodes data in io
+        if rel.get_start_prev_rel():
+            # if there are previous relationships - update previous relationship
+            self.io_engine.update_relationship(rel.get_start_prev_rel())
+        else:
+            # update start node if this relation is first for start node
+            self.io_engine.update_node(start_node)
+
+        if rel.get_end_prev_rel():
+            # if there are previous relationships - update previous relationship
+            end_node.add_relationship(rel.get_end_prev_rel())
+        else:
+            # update end node if this relation is first for end node
+            self.io_engine.update_node(end_node)
 
         if label in self.ids_edges:
             self.ids_edges[label].append(rel)
         else:
             self.ids_edges[label] = [rel]
 
-        # properties
-        if properties:
-            first_property = self._insert_properties(properties)
-            rel.set_first_property(first_property)
-
-        # updating start/end nodes data
-        # update start node if this relation is first for start node
-        if not start_node.get_first_relationship():
-            start_node.set_first_relationship(rel)
-            self.io_engine.update_node(start_node)
-        else:
-            # if there are previous relationships - update dependency fields
-            last_rel = start_node.get_relationships()[-1]
-            last_rel.set_start_next_rel(rel)
-            rel.set_start_prev_rel(last_rel)
-            self.io_engine.update_relationship(last_rel)
-        start_node.add_relationship(rel)
-
-        # update end node if this relation is first for end node
-        if rel.get_end_node().get_first_relationship() is None:
-            end_node.set_first_relationship(rel)
-            self.io_engine.update_node(end_node)
-        else:
-            # if there are previous relationships - update dependency fields
-            last_rel = end_node.get_relationships()[-1]
-            last_rel.set_end_next_rel(rel)
-            rel.set_end_prev_rel(last_rel)
-            self.io_engine.update_relationship(last_rel)
-        end_node.add_relationship(rel)
-
-        # relationship itself
-        rel = self.io_engine.insert_relationship(rel)
-        self.relationships[rel_id] = rel
+        self.relationships[rel.get_id()] = rel
 
         return rel
+
+    def insert_property(self, obj: Union[Node, Relationship], prop: Property):
+        prop = self.io_engine.insert_property(prop)
+
+        if isinstance(obj, Node) or isinstance(obj, Relationship):
+            last_prop = obj.get_last_property()
+            obj.add_property(prop)
+            if last_prop:
+                self.io_engine.update_property(last_prop)
+            elif isinstance(obj, Node):
+                self.io_engine.update_node(obj)
+            else:
+                self.io_engine.update_relationship(obj)
+            return obj
+        else:
+            return None
 
     def select_node(self, node_id):
         if node_id not in self.nodes:
@@ -118,27 +126,30 @@ class Graph:
             self.labels[label_id] = label
         return self.labels[label_id]
 
-    def select_properties(self, first_prop_id):
+    def select_properties(self, first_prop_id) -> List[Property]:
+        properties = list()
+
         if first_prop_id == INVALID_ID:
-            return None
+            return properties
 
         property_data = self.io_engine.select_property(first_prop_id)
         prop = Property(used=property_data['used'],
                         id=property_data['id'],
                         key=property_data['key'],
                         value=property_data['value'])
-        first_prop = prop
+        properties.append(prop)
+
         while property_data['next_prop_id'] != INVALID_ID:
-            next_property_data = self.io_engine.select_property(property_data['next_prop_id'])
-            next_property = Property(used=next_property_data['used'],
-                                     id=next_property_data['id'],
-                                     key=next_property_data['key'],
-                                     value=next_property_data['value'])
+            property_data = self.io_engine.select_property(property_data['next_prop_id'])
+            next_property = Property(used=property_data['used'],
+                                     id=property_data['id'],
+                                     key=property_data['key'],
+                                     value=property_data['value'])
             prop.set_next_property(next_property)
             prop = next_property
-            property_data = next_property
+            properties.append(prop)
 
-        return first_prop
+        return properties
 
     def select_nth_node(self, n):
         return self.io_engine.select_node(n)
@@ -198,15 +209,9 @@ class Graph:
         first_prop_id = self.get_stats()['PropertyStorage']
         for i in range(len(properties)):
             properties[i].set_id(first_prop_id + i)
-            try:
-                properties[i].set_next_property(properties[i + 1])
-            except IndexError:
-                pass
+            self.io_engine.insert_property(properties[i])
 
-        for prop in properties:
-            self.io_engine.insert_property(prop)
-
-        return properties[0]
+        return properties
 
     def collect_new_objects(self, entry_obj_id, type='Node'):
         node_ids_to_read = set()
@@ -231,16 +236,14 @@ class Graph:
             for node_id in node_ids_to_read:
                 if node_id != INVALID_ID:
                     node_data = self.io_engine.select_node(node_id)
-                    self.nodes[node_id] = Node(id=node_id, used=node_data['used'])
 
-                    if node_data['first_rel_id'] not in relationships_data:
+                    if node_data['first_rel_id'] != INVALID_ID and node_data['first_rel_id'] not in relationships_data:
                         rel_ids_to_read.add(node_data['first_rel_id'])
 
                     if node_data['label_id'] not in self.labels:
                         label_ids_to_read.add(node_data['label_id'])
 
-                    first_prop = self.select_properties(node_data['first_prop_id'])
-                    node_data['first_prop'] = first_prop
+                        nodes_data['properties'] = self.select_properties(nodes_data['first_prop_id'])
                     nodes_data[node_id] = node_data
             node_ids_to_read = set()
 
@@ -248,7 +251,6 @@ class Graph:
             for rel_id in rel_ids_to_read:
                 if rel_id != INVALID_ID and rel_id not in relationships_data:
                     rel_data = self.io_engine.select_relationship(rel_id)
-                    self.relationships[rel_id] = Relationship(id=rel_id, used=rel_data['used'])
 
                     if rel_data['start_node'] not in relationships_data:
                         node_ids_to_read.add(rel_data['start_node'])
@@ -259,44 +261,46 @@ class Graph:
                     if rel_data['label_id'] not in self.labels:
                         label_ids_to_read.add(rel_data['label_id'])
 
-                    if rel_data['start_prev_id'] not in relationships_data:
+                    if rel_data['start_prev_id'] != INVALID_ID and rel_data['start_prev_id'] not in relationships_data:
                         new_rel_ids.add(rel_data['start_prev_id'])
 
-                    if rel_data['start_next_id'] not in relationships_data:
+                    if rel_data['start_next_id'] != INVALID_ID and rel_data['start_next_id'] not in relationships_data:
                         new_rel_ids.add(rel_data['start_next_id'])
 
-                    if rel_data['end_prev_id'] not in relationships_data:
+                    if rel_data['end_prev_id'] != INVALID_ID and rel_data['end_prev_id'] not in relationships_data:
                         new_rel_ids.add(rel_data['end_prev_id'])
 
-                    if rel_data['end_next_id'] not in relationships_data:
+                    if rel_data['end_next_id'] != INVALID_ID and rel_data['end_next_id'] not in relationships_data:
                         new_rel_ids.add(rel_data['end_next_id'])
 
-                    first_prop = self.io_engine.select_property(rel_data['first_prop_id'])
-                    rel_data['first_prop'] = first_prop
+                    rel_data['properties'] = self.select_properties(rel_data['first_prop_id'])
                     relationships_data[rel_id] = rel_data
             rel_ids_to_read = new_rel_ids
 
-        for node_id in self.nodes:
+        for node_id in nodes_data:
             if node_id != INVALID_ID:
-                node = self.nodes[node_id]
-                nodes_data = nodes_data[node_id]
+                node_data = nodes_data[node_id]
+                node = Node(id=node_id, label=self.labels[node_data['label_id']])
 
-                node.set_label(self.labels[nodes_data['label_id']])
-                node.set_first_property(nodes_data['first_prop'])
-                node.set_first_relationship(self.relationships[nodes_data['first_rel_id']])
+                for prop in nodes_data['properties']:
+                    node.add_property(prop)
 
-        for rel_id in self.relationships:
+                self.nodes[node_id] = node
+
+        for rel_id in relationships_data:
             if rel_id != INVALID_ID:
-                rel = self.relationships[rel_id]
                 rel_data = relationships_data[rel_id]
+                rel = Relationship(id=rel_id,
+                                   label=self.labels[rel_data['label_id']],
+                                   start_node=self.nodes[rel_data['start_node']],
+                                   end_node=self.nodes[rel_data['end_node']])
 
-                rel.set_label(self.labels[rel_data['label_id']])
-                rel.set_start_node(self.nodes[rel_data['start_node']])
-                rel.set_end_node(self.nodes[rel_data['end_node']])
+                for prop in rel_data['properties']:
+                    rel.add_property(prop)
 
-                rel.set_start_prev_rel(self.nodes[rel_data['start_prev_id']])
-                rel.set_start_next_rel(self.nodes[rel_data['start_next_id']])
-                rel.set_end_prev_rel(self.nodes[rel_data['end_prev_id']])
-                rel.set_end_next_rel(self.nodes[rel_data['end_next_id']])
+                # rel.set_start_prev_rel(self.nodes[rel_data['start_prev_id']])
+                # rel.set_start_next_rel(self.nodes[rel_data['start_next_id']])
+                # rel.set_end_prev_rel(self.nodes[rel_data['end_prev_id']])
+                # rel.set_end_next_rel(self.nodes[rel_data['end_next_id']])
 
-                rel.set_first_property(rel_data['first_prop'])
+                self.relationships[rel_id] = rel

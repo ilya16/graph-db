@@ -2,10 +2,7 @@ from unittest import TestCase
 import os
 
 from graph_db.engine.graph import Graph
-from graph_db.engine.label import Label
-from graph_db.engine.node import Node
 from graph_db.engine.property import Property
-from graph_db.engine.relationship import Relationship
 from graph_db.fs.io_engine import DYNAMIC_RECORD_PAYLOAD_SIZE
 
 
@@ -14,6 +11,11 @@ class IOEngineCase(TestCase):
 
     def setUp(self):
         self.graph_engine = Graph(name='Test Graph', temp_dir=self.temp_dir)
+
+        self.assertDictEqual(dict(), self.graph_engine.nodes)
+        self.assertDictEqual(dict(), self.graph_engine.relationships)
+        self.assertDictEqual(dict(), self.graph_engine.labels)
+        self.assertDictEqual(dict(), self.graph_engine.label_names)
 
     def tearDown(self):
         self.graph_engine.close_engine()
@@ -35,9 +37,13 @@ class IOEngineCase(TestCase):
         retrieved_node = self.graph_engine.select_node(node.get_id())
         label = retrieved_node.get_label()
 
-        self.assertEqual(retrieved_node.get_id(), node.get_id(), 'Node ids have changed')
+        self.assertEqual(node.get_id(), retrieved_node.get_id(), 'Node ids have changed')
         self.assertEqual(0, label.get_id(), 'Label id is incorrect')
         self.assertEqual('test', retrieved_node.get_label().get_name(), 'Label name is incorrect')
+
+        self.assertDictEqual({node.get_id(): retrieved_node}, self.graph_engine.nodes)
+        self.assertDictEqual(dict(), self.graph_engine.relationships)
+        self.assertDictEqual({label.get_id(): label}, self.graph_engine.labels)
 
         # inserting another node with the same label
         node = self.graph_engine.insert_node(label_name)
@@ -140,30 +146,35 @@ class IOEngineCase(TestCase):
 
     def test_properties(self):
         label_name = 'test'
-        self.graph_engine.insert_node(label_name)
-        self.assertEqual(1, self.graph_engine.get_stats()['NodeStorage'], 'Storage contains extra data')
+        first_property = Property(key='Age', value='18')
 
-        # Insert and select first property
-        node_property = Property(key='Age', value='18')
-        node_property = self.graph_engine.insert_property(node_property)
+        # Create node with one property
+        node = self.graph_engine.insert_node(label_name=label_name, properties=[first_property])
+        self.assertEqual(1, self.graph_engine.get_stats()['NodeStorage'], 'Storage contains extra data')
+        self.assertEqual(0, node.get_id(), 'Node ids have changed')
         self.assertEqual(1, self.graph_engine.get_stats()['PropertyStorage'], 'Storage contains extra data')
 
-        retrieved_property = self.graph_engine.select_property(node_property.get_id())
-        self.assertEqual(retrieved_property.get_id(), node_property.get_id(), 'Property ids have changed')
-        self.assertEqual(0, retrieved_property.get_id(), 'Property has incorrect id')
-        self.assertEqual('Age', retrieved_property.get_key(), 'Property\'s key have changed')
-        self.assertEqual('18', retrieved_property.get_value(), 'Property\'s value have changed')
+        retrieved_first_property = node.get_first_property()
+        self.assertEqual(0, retrieved_first_property.get_id(), 'Property has incorrect id')
+        self.assertEqual('Age', retrieved_first_property.get_key(), 'Property\'s key have changed')
+        self.assertEqual('18', retrieved_first_property.get_value(), 'Property\'s value have changed')
+        self.assertIsNone(retrieved_first_property.get_next_property(), 'Property object is not consistent')
 
-        # Insert and select second property
-        node_property = Property(key='Sex', value='Male')
-        node_property = self.graph_engine.insert_property(node_property)
+        # Add second property to node
+        second_property = Property(key='Sex', value='Male')
+        node = self.graph_engine.insert_property(node, second_property)
         self.assertEqual(2, self.graph_engine.get_stats()['PropertyStorage'], 'Storage has incorrect number of properties')
 
-        retrieved_property = self.graph_engine.select_property(node_property.get_id())
-        self.assertEqual(retrieved_property.get_id(), node_property.get_id(), 'Property ids have changed')
-        self.assertEqual(1, retrieved_property.get_id(), 'Property has incorrect id')
-        self.assertEqual('Sex', retrieved_property.get_key(), 'Property\'s key have changed')
-        self.assertEqual('Male', retrieved_property.get_value(), 'Property\'s value have changed')
+        retrieved_second_property = node.get_last_property()
+        self.assertEqual(retrieved_second_property.get_id(), second_property.get_id(), 'Property ids have changed')
+        self.assertEqual(1, retrieved_second_property.get_id(), 'Property has incorrect id')
+        self.assertEqual('Sex', retrieved_second_property.get_key(), 'Property\'s key have changed')
+        self.assertEqual('Male', retrieved_second_property.get_value(), 'Property\'s value have changed')
+
+        self.assertListEqual([first_property, second_property], node.get_properties(), 'List of properties is incorrect')
+        self.assertIsNone(retrieved_second_property.get_next_property(), 'Second property should not have next property')
+        self.assertEqual(retrieved_second_property, retrieved_first_property.get_next_property(),
+                         'Next property pointer is damaged')
 
     def test_simple_case(self):
         """
@@ -171,59 +182,44 @@ class IOEngineCase(TestCase):
         :return:
         """
         # Define labels
-        node_label = Label('User')
-        edge_label = Label('loves :-)')
+        node_label_name = 'User'
+        edge_label_name = 'loves :-)'
+
+        # First node properties
+        first_node_props = [Property('Name', 'Robin'), Property('Age', 18), Property('Male', True)]
 
         # Define first node
-        first_node = self.graph_engine.insert_node(Node(node_label))
-
-        # Add properties to first node
-        first_node.add_property(Property('Name', 'Robin'))
-        first_node.add_property(Property('Age', 18))
-        first_node.add_property(Property('Male', True))
+        first_node = self.graph_engine.insert_node(label_name=node_label_name, properties=first_node_props)
 
         # Update node with new properties
-        first_node = self.graph_engine.update_node(first_node)
         retrieved_node = self.graph_engine.select_node(first_node.get_id())
+        self.assertEqual(first_node, retrieved_node, 'Node has changed')
         self.assertEqual(0, retrieved_node.get_id(), 'Node id is incorrect')
         self.assertEqual('Robin', retrieved_node.get_first_property().get_value(), 'Value of first property has changed')
-        self.assertEqual('18', retrieved_node.get_properties()[1].get_value(), 'Value of second property has changed')
-        self.assertEqual('True', retrieved_node.get_properties()[2].get_value(), 'Value of third property has changed')
+        self.assertEqual(18, retrieved_node.get_properties()[1].get_value(), 'Value of second property has changed')
+        self.assertEqual(True, retrieved_node.get_properties()[2].get_value(), 'Value of third property has changed')
 
         # Define second node
-        second_node = self.graph_engine.insert_node(Node(node_label))
+        second_node = self.graph_engine.insert_node(label_name=node_label_name)
         self.assertEqual(2, self.graph_engine.get_stats()['NodeStorage'], 'Storage has incorrect number of nodes')
+        self.assertEqual(1, second_node.get_id(), 'Node id is incorrect')
 
         # Add properties to second node
-        second_node.add_property(Property('Name', 'Sara'))
-        second_node.add_property(Property('Age', 20))
-        second_node.add_property(Property('Male', False))
-
-        # Update node with new properties
-        second_node = self.graph_engine.update_node(second_node)
-        self.assertEqual(1, second_node.get_id(), 'Incorrect id of node')
+        second_node = self.graph_engine.insert_property(second_node, Property('Name', 'Sara'))
+        second_node = self.graph_engine.insert_property(second_node, Property('Age', 20))
+        second_node = self.graph_engine.insert_property(second_node, Property('Male', False))
 
         retrieved_node = self.graph_engine.select_node(second_node.get_id())
         self.assertEqual('Sara', retrieved_node.get_first_property().get_value(), 'Value of first property has changed')
-        self.assertEqual('20', retrieved_node.get_properties()[1].get_value(), 'Value of second property has changed')
-        self.assertEqual('False', retrieved_node.get_properties()[2].get_value(), 'Value of third property has changed')
+        self.assertEqual(20, retrieved_node.get_properties()[1].get_value(), 'Value of second property has changed')
+        self.assertEqual(False, retrieved_node.get_properties()[2].get_value(), 'Value of third property has changed')
 
         # Create first relationship
-        relationship = Relationship(label=edge_label,
-                                    start_node=first_node,
-                                    end_node=second_node)
-        first_node.add_relationship(relationship)
-        second_node.add_relationship(relationship)
-
-        relationship = self.graph_engine.insert_relationship(relationship)
+        relationship = self.graph_engine.insert_relationship(edge_label_name, first_node, second_node)
         self.assertEqual(1, self.graph_engine.get_stats()['RelationshipStorage'], 'Storage contains extra data')
 
         # Add property to relationship
-        edge_property = Property('How many years', 1)
-        relationship.add_property(edge_property)
-        # Update relationship with new property
-        relationship = self.graph_engine.update_relationship(relationship)
-        self.assertEqual(1, self.graph_engine.get_stats()['RelationshipStorage'], 'Storage contains extra data')
+        self.graph_engine.insert_property(relationship, Property('How many years', 1))
 
         retrieved_relationship = self.graph_engine.select_relationship(relationship.get_id())
         self.assertEqual(retrieved_relationship.get_id(), relationship.get_id(), 'Relationship id have changed')
@@ -234,6 +230,6 @@ class IOEngineCase(TestCase):
                          'Relationship\'s label has changed')
         self.assertEqual('How many years', retrieved_relationship.get_first_property().get_key(),
                          'Incorrect property\'s key')
-        self.assertEqual('1', retrieved_relationship.get_first_property().get_value(), 'Incorrect property\'s value')
-        self.assertEqual('20', retrieved_relationship.get_end_node().get_properties()[1].get_value(),
+        self.assertEqual(1, retrieved_relationship.get_first_property().get_value(), 'Incorrect property\'s value')
+        self.assertEqual(20, retrieved_relationship.get_end_node().get_properties()[1].get_value(),
                          'Incorrect end node property\'s value')
