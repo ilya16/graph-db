@@ -1,5 +1,6 @@
 from graph_db.engine.property import Property
 from graph_db.engine.graph import Graph
+import re
 
 
 class Parser:
@@ -101,98 +102,41 @@ class Parser:
                 print("Incorrect query")
                 return None
             try:
-                if match_of == 'node:':
-                    if '>' not in third_term and '<' not in third_term and '=' not in third_term \
-                            and '>=' not in third_term and '<=' not in third_term:
-                        selected_nodes = graph.select_node_by_label(third_term)
-                        for node in selected_nodes:
-                            print(node)
-                        return selected_nodes
+                if match_of == 'node:' or match_of == 'edge:':
+                    symbols = ['>', '<', '=', '>=', '<=']
+                    sign = re.findall('[<=>]+', third_term)
+                    if len(sign) == 0:
+                        if match_of == 'node:':
+                            selected_nodes = graph.select_node_by_label(third_term)
+                            for node in selected_nodes:
+                                print(node)
+                            return selected_nodes
+                        elif match_of == 'edge:':
+                            selected_edges = graph.select_edge_by_label(third_term)
+                            for edge in selected_edges:
+                                print(edge)
+                            return selected_edges
                     else:
-                        if '>=' in third_term:
-                            key, value = third_term.split('>=')
-                            selected_by_property = graph.select_with_condition(key, value, '>=')
+                        if sign[0] in symbols:
+                            key, value = third_term.split(sign[0])
+                            selected_by_property = []
+                            if match_of == 'node:':
+                                selected_by_property = graph.select_with_condition(key, value, sign[0], 'node')
+                            elif match_of == 'edge:':
+                                selected_by_property = graph.select_with_condition(key, value, sign[0], 'edge')
                             for obj in selected_by_property:
-                                for item in obj:
-                                    print(item)
+                                print(obj)
                             return selected_by_property
-                        elif '<=' in third_term:
-                            key, value = third_term.split('<=')
-                            selected_by_property = graph.select_with_condition(key, value, '<=')
-                            for obj in selected_by_property:
-                                for item in obj:
-                                    print(item)
-                            return selected_by_property
-                        elif '>' in third_term:
-                            key, value = third_term.split('>')
-                            selected_by_property = graph.select_with_condition(key, value, '>')
-                            for obj in selected_by_property:
-                                for item in obj:
-                                    print(item)
-                            return selected_by_property
-                        elif '<' in third_term:
-                            key, value = third_term.split('<')
-                            selected_by_property = graph.select_with_condition(key, value, '<')
-                            for obj in selected_by_property:
-                                for item in obj:
-                                    print(item)
-                            return selected_by_property
-                        elif '=' in third_term:
-                            key, value = third_term.split('=')
-                            selected_by_property = graph.select_with_condition(key, value, '=')
-                            for obj in selected_by_property:
-                                for item in obj:
-                                    print(item)
-                            return selected_by_property
-                if match_of == 'edge:':
-                    if '>' not in third_term and '<' not in third_term and '=' not in third_term \
-                            and '>=' not in third_term and '<=' not in third_term:
-                        selected_edges = graph.select_node_by_label(third_term)
-                        for edge in selected_edges:
-                            print(edge)
-                        return selected_edges
-                    else:
-                        if '>=' in third_term:
-                            key, value = third_term.split('>=')
-                            selected_by_property = graph.select_with_condition(key, value, '>=')
-                            for obj in selected_by_property:
-                                for item in obj:
-                                    print(item)
-                            return selected_by_property
-                        elif '<=' in third_term:
-                            key, value = third_term.split('<=')
-                            selected_by_property = graph.select_with_condition(key, value, '<=')
-                            for obj in selected_by_property:
-                                for item in obj:
-                                    print(item)
-                            return selected_by_property
-                        elif '>' in third_term:
-                            key, value = third_term.split('>')
-                            selected_by_property = graph.select_with_condition(key, value, '>')
-                            for obj in selected_by_property:
-                                for item in obj:
-                                    print(item)
-                            return selected_by_property
-                        elif '<' in third_term:
-                            key, value = third_term.split('<')
-                            selected_by_property = graph.select_with_condition(key, value, '<')
-                            for obj in selected_by_property:
-                                for item in obj:
-                                    print(item)
-                            return selected_by_property
-                        elif '=' in third_term:
-                            key, value = third_term.split('=')
-                            selected_by_property = graph.select_with_condition(key, value, '=')
-                            for obj in selected_by_property:
-                                for item in obj:
-                                    print(item)
-                            return selected_by_property
+                        else:
+                            print('Incorrect query')
+                            return None
                 if match_of == 'graph:':
                     if third_term == graph.name:
                         print("\nGraph: '" + str(graph.name) + "'")
                         objects = graph.traverse_graph()
                         for obj in objects:
                             print(obj)
+                        print('\n')
                         return objects
                     else:
                         print("There is no such " + '"' + str(third_term) + '"' + " graph")

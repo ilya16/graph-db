@@ -8,24 +8,28 @@ from graph_db.access.parser import Parser
 class ParserCase(TestCase):
     temp_dir = 'temp_db/'
     queries = [
-            'CREATE graph: test_graph',
-            'CREATE node: Cat',
-            'CREATE node: Mouse',
-            'CREATE edge: catches FROM Cat TO Mouse',
-            'CREATE node: Cat',
-            'MATCH node: Cat',
-            'MATCH node: Mouse',
-            'MATCH edge: catches',
-            'CREATE node: Jerry Animal:Mouse',
-            'CREATE node: Tom Animal:Cat',
-            'CREATE edge: catches FROM Jerry TO Tom Durability:2',
-            'CREATE edge: fights FROM Tom TO Jerry Time:10',
-            'CREATE node: system Type:PC CPU:Intel GPU:NVidia',
-            'CREATE edge: plays FROM Tom To system Since:2016 Game:MadMax',
-            'MATCH graph: test_graph',
-            'CREATE node: boy Age:20 Sex:male',
-            'MATCH node: Age>15 Sex=male',
-            'MATCH node: Age=300 Sex=female'
+        'CREATE graph: test_graph',
+        'CREATE node: Cat',
+        'CREATE node: Mouse',
+        'CREATE edge: catches FROM Cat TO Mouse',
+        'CREATE node: Cat',
+        'MATCH node: Cat',
+        'MATCH node: Mouse',
+        'MATCH edge: catches',
+        'CREATE node: Jerry Animal:Mouse',
+        'CREATE node: Tom Animal:Cat',
+        'CREATE edge: catches FROM Jerry TO Tom Durability:2',
+        'CREATE edge: fights FROM Tom TO Jerry Time:10',
+        'CREATE node: system Type:PC CPU:Intel GPU:NVidia',
+        'CREATE edge: plays FROM Tom To system Since:2016 Game:MadMax',
+        'MATCH graph: test_graph',
+        'CREATE node: boy age:20 sex:male',
+        'CREATE node: girl age:19 sex:female',
+        'CREATE edge: loves FROM boy TO girl since:2015',
+        'MATCH node: age>19',
+        'MATCH node: sex=male',
+        'MATCH node: age<100',
+        'MATCH edge: since=2015'
     ]
 
     def setUp(self):
@@ -155,3 +159,26 @@ class ParserCase(TestCase):
         # Graph traverse with MATCH graph: graph
         objects = self.parser.parse_query(self.graph, self.queries[14])
         self.assertEqual(10, len(objects), 'Number of objects in graph is incorrect')
+
+        # Create 2 nodes and 1 edge with properties to match
+        self.graph = self.parser.parse_query(self.graph, self.queries[15])
+        self.graph = self.parser.parse_query(self.graph, self.queries[16])
+        self.graph = self.parser.parse_query(self.graph, self.queries[17])
+
+        # Match nodes by property
+        retrieved_objects = self.parser.parse_query(self.graph, self.queries[18])
+        self.assertEqual(1, len(retrieved_objects), 'Incorrect number of matched nodes')
+        self.assertEqual(20, int(retrieved_objects[0].get_first_property().get_value()),
+                         'Retrieved value of property is incorrect')
+
+        # Node
+        retrieved_objects = self.parser.parse_query(self.graph, self.queries[19])
+        self.assertEqual(1, len(retrieved_objects), 'Incorrect number of matched nodes')
+
+        # Node
+        retrieved_objects = self.parser.parse_query(self.graph, self.queries[20])
+        self.assertEqual(2, len(retrieved_objects), 'Incorrect number of matched nodes')
+
+        # Edge
+        retrieved_objects = self.parser.parse_query(self.graph, self.queries[21])
+        self.assertEqual(1, len(retrieved_objects), 'Incorrect number of matched edges')
