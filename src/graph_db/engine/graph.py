@@ -33,10 +33,10 @@ class Graph:
         self.io_engine.close()
 
     def create_node(self, label_name: str, properties=list()):
-        self.insert_node(label_name, properties)
+        return self.insert_node(label_name, properties)
 
     def create_edge(self, label_name: str, start_node: Node, end_node: Node, properties=list()):
-        self.insert_relationship(label_name, start_node, end_node, properties)
+        return self.insert_relationship(label_name, start_node, end_node, properties)
 
     def create_property(self, obj: Union[Node, Relationship], prop: Property):
         self.insert_property(obj, prop)
