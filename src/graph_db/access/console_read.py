@@ -27,8 +27,9 @@ class ConsoleReader:
                     continue
                 else:
                     if self.is_created is False:
-                        self.is_created = True
                         self.graph = self.parser.parse_query(None, user_input)
+                        if self.graph is not None:
+                            self.is_created = True
                     else:
                         if 'CREATE graph' in user_input:
                             print("You have already created a graph called '" + self.graph.name + "'")

@@ -21,6 +21,7 @@ class Graph:
 
         self.io_engine = IOEngine()
         self.io_engine.add_worker(temp_storage)
+        self.labels = {}
         self.ids_nodes = dict()
         self.properties = dict()
         self.ids_edges = dict()
@@ -37,6 +38,16 @@ class Graph:
     def insert_node(self, label_name, properties=list()) -> Node:
         # label
         label = self._insert_label(label_name)
+        
+#         if len(properties) != 0:
+#             for prop in properties:
+#                 node.add_property(prop)
+#                 p = {prop.get_key(): prop.get_value()}
+#                 key = frozenset(p.items())
+#                 if key in self.properties:
+#                     self.properties[key].append(node)
+#                 else:
+#                     self.properties[key] = [node]
 
         # node itself
         node = Node(label=label, properties=properties)
@@ -67,6 +78,16 @@ class Graph:
 
         # properties
         self._insert_properties(properties)
+        
+#         if len(properties) != 0:
+#             for prop in properties:
+#                 edge.add_property(prop)
+#                 p = {prop.get_key(): prop.get_value()}
+#                 key = frozenset(p.items())
+#                 if key in self.properties:
+#                     self.properties[key].append(edge)
+#                 else:
+#                     self.properties[key] = [edge]
 
         rel = self.io_engine.insert_relationship(rel)
 
@@ -169,20 +190,42 @@ class Graph:
     def get_stats(self):
         return self.io_engine.get_stats()
 
-    # def select_with_condition(self, key, value, cond):
-    #     to_return = []
-    #     if cond == '=':
-    #         for prop in self.properties:
-    #             if self.properties[prop].get_ ==
-    #     elif cond == '>':
-    #
-    #     elif cond == '<':
-
-    def select_by_property(self, prop):
+    def select_with_condition(self, key, value, cond, match_of):
         objects = []
-        for p in self.properties:
-            if p.get_key() == prop.get_key():
-                objects.append(self.properties[p])
+        for prop in self.properties:
+            prop_key = list(prop)[0][0]
+            prop_value = list(prop)[0][1]
+            if key == prop_key:
+                if cond == '=' and prop_value == value:
+                    for obj in self.properties[prop]:
+                        if match_of == 'node' and type(obj) is Node:
+                            objects.append(obj)
+                        elif match_of == 'edge' and type(obj) is Relationship:
+                            objects.append(obj)
+                elif cond == '>' and int(prop_value) > int(value):
+                    for obj in self.properties[prop]:
+                        if match_of == 'node' and type(obj) is Node:
+                            objects.append(obj)
+                        elif match_of == 'edge' and type(obj) is Relationship:
+                            objects.append(obj)
+                elif cond == '<' and int(prop_value) < int(value):
+                    for obj in self.properties[prop]:
+                        if match_of == 'node' and type(obj) is Node:
+                            objects.append(obj)
+                        elif match_of == 'edge' and type(obj) is Relationship:
+                            objects.append(obj)
+                elif cond == '>=' and int(prop_value) >= int(value):
+                    for obj in self.properties[prop]:
+                        if match_of == 'node' and type(obj) is Node:
+                            objects.append(obj)
+                        elif match_of == 'edge' and type(obj) is Relationship:
+                            objects.append(obj)
+                elif cond == '<=' and int(prop_value) <= int(value):
+                    for obj in self.properties[prop]:
+                        if match_of == 'node' and type(obj) is Node:
+                            objects.append(obj)
+                        elif match_of == 'edge' and type(obj) is Relationship:
+                            objects.append(obj)
         return objects
 
     def traverse_graph(self):
