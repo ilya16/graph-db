@@ -26,6 +26,12 @@ class Graph:
         self.properties = dict()
         self.ids_edges = dict()
 
+    def get_stats(self):
+        return self.io_engine.get_stats()
+
+    def close_engine(self):
+        self.io_engine.close()
+
     def create_node(self, label_name: str, properties=list()):
         self.insert_node(label_name, properties)
 
@@ -38,29 +44,19 @@ class Graph:
     def insert_node(self, label_name, properties=list()) -> Node:
         # label
         label = self._insert_label(label_name)
-        
-#         if len(properties) != 0:
-#             for prop in properties:
-#                 node.add_property(prop)
-#                 p = {prop.get_key(): prop.get_value()}
-#                 key = frozenset(p.items())
-#                 if key in self.properties:
-#                     self.properties[key].append(node)
-#                 else:
-#                     self.properties[key] = [node]
 
         # node itself
         node = Node(label=label, properties=properties)
 
         # properties
-        self._insert_properties(properties)
+        self._insert_properties(properties, node)
 
         node = self.io_engine.insert_node(node)
 
-        if label in self.ids_nodes:
-            self.ids_nodes[label].append(node)
+        if label_name in self.ids_nodes:
+            self.ids_nodes[label_name].append(node)
         else:
-            self.ids_nodes[label] = [node]
+            self.ids_nodes[label_name] = [node]
 
         self.nodes[node.get_id()] = node
 
@@ -77,17 +73,7 @@ class Graph:
                            properties=properties)
 
         # properties
-        self._insert_properties(properties)
-        
-#         if len(properties) != 0:
-#             for prop in properties:
-#                 edge.add_property(prop)
-#                 p = {prop.get_key(): prop.get_value()}
-#                 key = frozenset(p.items())
-#                 if key in self.properties:
-#                     self.properties[key].append(edge)
-#                 else:
-#                     self.properties[key] = [edge]
+        self._insert_properties(properties, rel)
 
         rel = self.io_engine.insert_relationship(rel)
 
@@ -106,10 +92,10 @@ class Graph:
             # update end node if this relation is first for end node
             self.io_engine.update_node(end_node)
 
-        if label in self.ids_edges:
-            self.ids_edges[label].append(rel)
+        if label_name in self.ids_edges:
+            self.ids_edges[label_name].append(rel)
         else:
-            self.ids_edges[label] = [rel]
+            self.ids_edges[label_name] = [rel]
 
         self.relationships[rel.get_id()] = rel
 
@@ -172,23 +158,11 @@ class Graph:
 
         return properties
 
-    def select_nth_node(self, n):
-        return self.io_engine.select_node(n)
-
-    def select_nth_edge(self, n):
-        return self.io_engine.select_relationship(n)
-
     def select_edge_by_label(self, label):
         return self.ids_edges[label]
 
     def select_node_by_label(self, label):
         return self.ids_nodes[label]
-
-    def close_engine(self):
-        self.io_engine.close()
-
-    def get_stats(self):
-        return self.io_engine.get_stats()
 
     def select_with_condition(self, key, value, cond, match_of):
         objects = []
@@ -248,11 +222,21 @@ class Graph:
             self.labels[label.get_id()] = label
         return label
 
-    def _insert_properties(self, properties):
+    def _insert_properties(self, properties, obj=None):
         first_prop_id = self.get_stats()['PropertyStorage']
-        for i in range(len(properties)):
-            properties[i].set_id(first_prop_id + i)
-            self.io_engine.insert_property(properties[i])
+        i = 0
+        for prop in properties:
+            prop.set_id(first_prop_id + i)
+            self.io_engine.insert_property(prop)
+            i += 1
+
+            if obj:
+                p = {prop.get_key(): prop.get_value()}
+                key = frozenset(p.items())
+                if key in self.properties:
+                    self.properties[key].append(obj)
+                else:
+                    self.properties[key] = [obj]
 
         return properties
 

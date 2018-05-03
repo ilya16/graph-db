@@ -51,14 +51,14 @@ class Parser:
                         except:
                             print('Write properties as follows: key:value')
                             return None
-                created_node = graph.create_node(label=node_label, properties=properties)
+                created_node = graph.create_node(label_name=node_label, properties=properties)
                 print(created_node)
 
             if creation_of == 'edge:':
                 try:
                     edge_label = query.split()[2]
-                    start_node = query.split()[4]
-                    end_node = query.split()[6]
+                    start_node_label = query.split()[4]
+                    end_node_label = query.split()[6]
                 except:
                     print("Incorrect query")
                     return None
@@ -85,9 +85,11 @@ class Parser:
                             except:
                                 print('Write properties as follows: key:value')
                                 return None
-                    created_edge = graph.create_edge(label=edge_label,
-                                                     start_node_label=start_node,
-                                                     end_node_label=end_node,
+                    start_node = graph.select_node_by_label(start_node_label)[0]
+                    end_node = graph.select_node_by_label(end_node_label)[0]
+                    created_edge = graph.create_edge(label_name=edge_label,
+                                                     start_node=start_node,
+                                                     end_node=end_node,
                                                      properties=properties)
                     print(created_edge)
                 except:

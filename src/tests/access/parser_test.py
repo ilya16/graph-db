@@ -1,7 +1,6 @@
 from unittest import TestCase
 import os
 
-from graph_db.engine.graph import Graph
 from graph_db.access.parser import Parser
 
 
@@ -54,7 +53,7 @@ class ParserCase(TestCase):
         self.graph = self.parser.parse_query(self.graph, self.queries[1])
         self.assertEqual(1, self.graph.get_stats()['NodeStorage'], 'Storage contains extra data')
 
-        retrieved_node = self.graph.select_nth_node(0)
+        retrieved_node = self.graph.select_node(node_id=0)
         self.assertEqual(0, retrieved_node.get_id(), 'Node id is incorrect')
 
         label = retrieved_node.get_label()
@@ -65,7 +64,7 @@ class ParserCase(TestCase):
         self.graph = self.parser.parse_query(self.graph, self.queries[2])
         self.assertEqual(2, self.graph.get_stats()['NodeStorage'], 'Storage contains extra data')
 
-        retrieved_node = self.graph.select_nth_node(1)
+        retrieved_node = self.graph.select_node(node_id=1)
         self.assertEqual(1, retrieved_node.get_id(), 'Node id is incorrect')
 
         label = retrieved_node.get_label()
@@ -76,7 +75,7 @@ class ParserCase(TestCase):
         self.graph = self.parser.parse_query(self.graph, self.queries[3])
         self.assertEqual(3, self.graph.get_stats()['LabelStorage'], 'Label storage contains extra data')
 
-        retrieved_edge = self.graph.select_nth_edge(0)
+        retrieved_edge = self.graph.select_relationship(rel_id=0)
         self.assertEqual(0, retrieved_edge.get_id(), 'Edge id is incorrect')
 
         label = retrieved_edge.get_label()
@@ -87,7 +86,7 @@ class ParserCase(TestCase):
         self.graph = self.parser.parse_query(self.graph, self.queries[4])
         self.assertEqual(3, self.graph.get_stats()['NodeStorage'], 'Storage contains extra data')
 
-        retrieved_node = self.graph.select_nth_node(2)
+        retrieved_node = self.graph.select_node(node_id=2)
         self.assertEqual(2, retrieved_node.get_id(), 'Node id is incorrect')
 
         label = retrieved_node.get_label()
@@ -115,14 +114,14 @@ class ParserCase(TestCase):
 
         # Create nodes with property
         self.graph = self.parser.parse_query(self.graph, self.queries[8])
-        retrieved_node = self.graph.select_nth_node(3)
+        retrieved_node = self.graph.select_node(node_id=3)
         self.assertEqual(3, retrieved_node.get_id(), 'Node id is incorrect')
         prop = retrieved_node.get_first_property()
         self.assertEqual(prop._key, 'Animal', 'Key of property is incorrect')
         self.assertEqual(prop._value, 'Mouse', 'Value of property is incorrect')
 
         self.graph = self.parser.parse_query(self.graph, self.queries[9])
-        retrieved_node = self.graph.select_nth_node(4)
+        retrieved_node = self.graph.select_node(node_id=4)
         self.assertEqual(4, retrieved_node.get_id(), 'Node id is incorrect')
         prop = retrieved_node.get_first_property()
         self.assertEqual(prop._key, 'Animal', 'Key of property is incorrect')
@@ -130,14 +129,14 @@ class ParserCase(TestCase):
 
         # Create edges with property
         self.graph = self.parser.parse_query(self.graph, self.queries[10])
-        retrieved_edge = self.graph.select_nth_edge(1)
+        retrieved_edge = self.graph.select_relationship(rel_id=1)
         self.assertEqual(1, retrieved_edge.get_id(), 'Edge id is incorrect')
         prop = retrieved_edge.get_first_property()
         self.assertEqual(prop._key, 'Durability', 'Key of property is incorrect')
         self.assertEqual(prop._value, '2', 'Value of property is incorrect')
 
         self.graph = self.parser.parse_query(self.graph, self.queries[11])
-        retrieved_edge = self.graph.select_nth_edge(2)
+        retrieved_edge = self.graph.select_relationship(rel_id=2)
         self.assertEqual(2, retrieved_edge.get_id(), 'Edge id is incorrect')
         prop = retrieved_edge.get_first_property()
         self.assertEqual(prop._key, 'Time', 'Key of property is incorrect')
@@ -145,15 +144,14 @@ class ParserCase(TestCase):
 
         # Create a node with multiple properties
         self.graph = self.parser.parse_query(self.graph, self.queries[12])
-        retrieved_node = self.graph.select_nth_node(5)
+        retrieved_node = self.graph.select_node(node_id=5)
         self.assertEqual(3, len(retrieved_node.get_properties()), 'Number of properties is incorrect')
         self.assertEqual('CPU', retrieved_node.get_properties()[1].get_key(), 'Retrieved key is incorrect')
         self.assertEqual('NVidia', retrieved_node.get_properties()[2].get_value(), 'Retrieved value is incorrect')
 
-
         # Create an edge with multiple properties
         self.graph = self.parser.parse_query(self.graph, self.queries[13])
-        retrieved_edge = self.graph.select_nth_edge(3)
+        retrieved_edge = self.graph.select_relationship(rel_id=3)
         self.assertEqual(2, len(retrieved_edge.get_properties()), 'Number of properties is incorrect')
         self.assertEqual('MadMax', retrieved_edge.get_properties()[1].get_value(), 'Retrieved value is incorrect')
         self.assertEqual(9, self.graph.io_engine.get_stats()['PropertyStorage'], 'Incorrect number of properties')
