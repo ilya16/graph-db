@@ -164,15 +164,15 @@ class Graph:
     def select_node_by_label(self, label):
         return self.ids_nodes[label]
 
-    def select_relationship_by_id(self, node_id):
+    def select_node_by_id(self, node_id):
         if node_id in self.nodes:
             return self.nodes[node_id]
         else:
             return None
 
-    def select_node_by_id(self, rel_id):
-        if rel_id in self.nodes:
-            return self.nodes[rel_id]
+    def select_relationship_by_id(self, rel_id):
+        if rel_id in self.relationships:
+            return self.relationships[rel_id]
         else:
             return None
 
@@ -213,6 +213,50 @@ class Graph:
                         elif match_of == 'relationship' and type(obj) is Relationship:
                             objects.append(obj)
         return objects
+
+    def update_node(self, node_id, prop):
+        node = self.select_node_by_id(node_id)
+        if node is not None:
+            p = {prop.get_key(): prop.get_value()}
+            key = frozenset(p.items())
+            if key in self.properties:
+                self.properties[key].append(node)
+            else:
+                self.properties[key] = [node]
+            node.add_property(prop)
+            return self.io_engine.update_node(node)
+        else:
+            return None
+
+    def update_relationship(self, rel_id, prop):
+        rel = self.select_relationship_by_id(rel_id)
+        if rel is not None:
+            p = {prop.get_key(): prop.get_value()}
+            key = frozenset(p.items())
+            if key in self.properties:
+                self.properties[key].append(rel)
+            else:
+                self.properties[key] = [rel]
+            rel.add_property(prop)
+            return self.io_engine.update_relationship(rel)
+        else:
+            return None
+
+    def delete_node(self, node_id):
+        node = self.select_node_by_id(node_id)
+        if node is not None:
+            node.set_used(False)
+            return self.io_engine.update_node(node)
+        else:
+            return None
+
+    def delete_relationship(self, rel_id):
+        rel = self.select_relationship_by_id(rel_id)
+        if rel is not None:
+            rel.set_used(False)
+            return self.io_engine.update_relationship(rel)
+        else:
+            return None
 
     def traverse_graph(self):
         objects = []

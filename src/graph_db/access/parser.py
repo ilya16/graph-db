@@ -174,3 +174,46 @@ class Parser:
             except:
                 print('Either you haven\'t created entered label or entered label is incorrect')
                 return None
+        elif query_type.lower() == 'delete':
+            try:
+                to_delete = query.split()[1]
+                third_term = query.split()[2]
+            except:
+                print("Incorrect query")
+                return None
+            try:
+                if to_delete == 'node:':
+                    node_id = int(third_term[3:])
+                    deleted_node = graph.delete_node(node_id)
+                    print(deleted_node)
+                    return deleted_node
+                elif to_delete == 'relationship:':
+                    rel_id = int(third_term[3:])
+                    deleted_relationship = graph.delete_relationship(rel_id)
+                    print(deleted_relationship)
+                    return deleted_relationship
+            except():
+                print("Incorrect query")
+                return None
+        elif query_type.lower() == 'update':
+            try:
+                to_update = query.split()[1]
+                third_term = query.split()[2]
+                key, value = query.split()[3].split(':')
+            except:
+                print("Incorrect query")
+                return None
+            try:
+                if to_update == 'node:':
+                    node_id = int(third_term[3:])
+                    updated_node = graph.update_node(node_id, Property(key, value))
+                    print(updated_node)
+                    return updated_node
+                elif to_update == 'relationship:':
+                    rel_id = int(third_term[3:])
+                    updated_relationship = graph.update_relationship(rel_id, Property(key, value))
+                    print(updated_relationship)
+                    return updated_relationship
+            except:
+                print("Incorrect query")
+                return None

@@ -18,6 +18,8 @@ greeting = "Query examples:\n" \
            "match node: key<value\n" \
            "match relationship: key>=value\n" \
            "match graph: label\n" \
+           "delete node: id:0\n" \
+           "delete relationship: id:0\n" \
            "'exit' to close\n"
 
 
