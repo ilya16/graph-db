@@ -201,7 +201,7 @@ class GraphEngine(Engine):
     # Update
 
     def update_node(self, node_id, prop):
-        node = self.select_node_by_id(node_id)
+        node = self.select_node(node_id)
         if node is not None:
             p = {prop.get_key(): prop.get_value()}
             key = frozenset(p.items())
@@ -215,7 +215,7 @@ class GraphEngine(Engine):
             return None
 
     def update_relationship(self, rel_id, prop):
-        rel = self.select_relationship_by_id(rel_id)
+        rel = self.select_relationship(rel_id)
         if rel is not None:
             p = {prop.get_key(): prop.get_value()}
             key = frozenset(p.items())
