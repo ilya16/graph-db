@@ -164,7 +164,7 @@ class IOEngine:
         label_record = self.dbfs_manager.read_record(label_id, 'LabelStorage')
         label_data = RecordDecoder.decode_label_record(label_record)
 
-        label_data['label_name'] = self._build_dynamic_data(label_data['dynamic_id'])
+        label_data['name'] = self._build_dynamic_data(label_data['dynamic_id'])
         return label_data
 
     # Property
@@ -206,7 +206,7 @@ class IOEngine:
                 # key has changed
                 key_dynamic_id = self.get_stats()['DynamicStorage']
                 self._write_dynamic_data(prop.get_key(), key_dynamic_id)
-            elif old_value != prop.get_key():
+            elif old_value != prop.get_value():
                 # value has changed
                 value_dynamic_id = self.get_stats()['DynamicStorage']
                 self._write_dynamic_data(prop.get_value(), value_dynamic_id)
@@ -260,5 +260,15 @@ class IOEngine:
 
             if dynamic_id == INVALID_ID:
                 break
+
+        if data == 'True':
+            return True
+        elif data == 'False':
+            return False
+        else:
+            try:
+                data = int(data)
+            except ValueError:
+                pass
 
         return data
