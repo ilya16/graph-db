@@ -7,28 +7,28 @@ from graph_db.access.parser import Parser
 class ParserCase(TestCase):
     temp_dir = 'temp_db/'
     queries = [
-        'CREATE graph: test_graph',
-        'CREATE node: Cat',
-        'CREATE node: Mouse',
-        'CREATE edge: catches FROM Cat TO Mouse',
-        'CREATE node: Cat',
-        'MATCH node: Cat',
-        'MATCH node: Mouse',
-        'MATCH edge: catches',
-        'CREATE node: Jerry Animal:Mouse',
-        'CREATE node: Tom Animal:Cat',
-        'CREATE edge: catches FROM Jerry TO Tom Durability:2',
-        'CREATE edge: fights FROM Tom TO Jerry Time:10',
-        'CREATE node: system Type:PC CPU:Intel GPU:NVidia',
-        'CREATE edge: plays FROM Tom To system Since:2016 Game:MadMax',
-        'MATCH graph: test_graph',
-        'CREATE node: boy age:20 sex:male',
-        'CREATE node: girl age:19 sex:female',
-        'CREATE edge: loves FROM boy TO girl since:2015',
-        'MATCH node: age>19',
-        'MATCH node: sex=male',
-        'MATCH node: age<100',
-        'MATCH edge: since=2015'
+        'create graph: test_graph',
+        'create node: Cat',
+        'create node: Mouse',
+        'create relationship: catches from Cat to Mouse',
+        'create node: Cat',
+        'match node: Cat',
+        'match node: Mouse',
+        'match relationship: catches',
+        'create node: Jerry Animal:Mouse',
+        'create node: Tom Animal:Cat',
+        'create relationship: catches from Jerry to Tom Durability:2',
+        'create relationship: fights from Tom to Jerry Time:10',
+        'create node: system Type:PC CPU:Intel GPU:NVidia',
+        'create relationship: plays from Tom To system Since:2016 Game:MadMax',
+        'match graph: test_graph',
+        'create node: boy age:20 sex:male',
+        'create node: girl age:19 sex:female',
+        'create relationship: loves from boy to girl since:2015',
+        'match node: age>19',
+        'match node: sex=male',
+        'match node: age<100',
+        'match relationship: since=2015'
     ]
 
     def setUp(self):
@@ -71,16 +71,16 @@ class ParserCase(TestCase):
         self.assertEqual(1, label.get_id(), 'Label id is incorrect')
         self.assertEqual('Mouse', label.get_name(), 'Label name is incorrect')
 
-        # Edge creation #1
+        # Relationship creation #1
         self.graph = self.parser.parse_query(self.graph, self.queries[3])
         self.assertEqual(3, self.graph.get_stats()['LabelStorage'], 'Label storage contains extra data')
 
-        retrieved_edge = self.graph.select_relationship(rel_id=0)
-        self.assertEqual(0, retrieved_edge.get_id(), 'Edge id is incorrect')
+        retrieved_relationship = self.graph.select_relationship(rel_id=0)
+        self.assertEqual(0, retrieved_relationship.get_id(), 'relationship id is incorrect')
 
-        label = retrieved_edge.get_label()
-        self.assertEqual(2, label.get_id(), 'Edge label id is incorrect')
-        self.assertEqual('catches', label.get_name(), 'Edge label name is incorrect')
+        label = retrieved_relationship.get_label()
+        self.assertEqual(2, label.get_id(), 'relationship label id is incorrect')
+        self.assertEqual('catches', label.get_name(), 'relationship label name is incorrect')
 
         # Node creation with the same 'Cat' label
         self.graph = self.parser.parse_query(self.graph, self.queries[4])
@@ -105,12 +105,12 @@ class ParserCase(TestCase):
         label = retrieved_object[0].get_label()
         self.assertEqual('Mouse', label.get_name(), 'Label of matched node is incorrect')
 
-        # Match 'catches' edge
+        # Match 'catches' relationship
         retrieved_object = self.parser.parse_query(self.graph, self.queries[7])
-        self.assertEqual(1, len(retrieved_object), 'Number of edges with label is incorrect')
+        self.assertEqual(1, len(retrieved_object), 'Number of relationships with label is incorrect')
 
         label = retrieved_object[0].get_label()
-        self.assertEqual('catches', label.get_name(), 'Label of matched edge is incorrect')
+        self.assertEqual('catches', label.get_name(), 'Label of matched relationship is incorrect')
 
         # Create nodes with property
         self.graph = self.parser.parse_query(self.graph, self.queries[8])
@@ -127,18 +127,18 @@ class ParserCase(TestCase):
         self.assertEqual(prop._key, 'Animal', 'Key of property is incorrect')
         self.assertEqual(prop._value, 'Cat', 'Value of property is incorrect')
 
-        # Create edges with property
+        # Create relationships with property
         self.graph = self.parser.parse_query(self.graph, self.queries[10])
-        retrieved_edge = self.graph.select_relationship(rel_id=1)
-        self.assertEqual(1, retrieved_edge.get_id(), 'Edge id is incorrect')
-        prop = retrieved_edge.get_first_property()
+        retrieved_relationship = self.graph.select_relationship(rel_id=1)
+        self.assertEqual(1, retrieved_relationship.get_id(), 'relationship id is incorrect')
+        prop = retrieved_relationship.get_first_property()
         self.assertEqual(prop._key, 'Durability', 'Key of property is incorrect')
         self.assertEqual(prop._value, '2', 'Value of property is incorrect')
 
         self.graph = self.parser.parse_query(self.graph, self.queries[11])
-        retrieved_edge = self.graph.select_relationship(rel_id=2)
-        self.assertEqual(2, retrieved_edge.get_id(), 'Edge id is incorrect')
-        prop = retrieved_edge.get_first_property()
+        retrieved_relationship = self.graph.select_relationship(rel_id=2)
+        self.assertEqual(2, retrieved_relationship.get_id(), 'relationship id is incorrect')
+        prop = retrieved_relationship.get_first_property()
         self.assertEqual(prop._key, 'Time', 'Key of property is incorrect')
         self.assertEqual(prop._value, '10', 'Value of property is incorrect')
 
@@ -149,18 +149,18 @@ class ParserCase(TestCase):
         self.assertEqual('CPU', retrieved_node.get_properties()[1].get_key(), 'Retrieved key is incorrect')
         self.assertEqual('NVidia', retrieved_node.get_properties()[2].get_value(), 'Retrieved value is incorrect')
 
-        # Create an edge with multiple properties
+        # Create an relationship with multiple properties
         self.graph = self.parser.parse_query(self.graph, self.queries[13])
-        retrieved_edge = self.graph.select_relationship(rel_id=3)
-        self.assertEqual(2, len(retrieved_edge.get_properties()), 'Number of properties is incorrect')
-        self.assertEqual('MadMax', retrieved_edge.get_properties()[1].get_value(), 'Retrieved value is incorrect')
+        retrieved_relationship = self.graph.select_relationship(rel_id=3)
+        self.assertEqual(2, len(retrieved_relationship.get_properties()), 'Number of properties is incorrect')
+        self.assertEqual('MadMax', retrieved_relationship.get_properties()[1].get_value(), 'Retrieved value is incorrect')
         self.assertEqual(9, self.graph.io_engine.get_stats()['PropertyStorage'], 'Incorrect number of properties')
 
-        # Graph traverse with MATCH graph: graph
+        # Graph traverse with match graph: graph
         objects = self.parser.parse_query(self.graph, self.queries[14])
         self.assertEqual(10, len(objects), 'Number of objects in graph is incorrect')
 
-        # Create 2 nodes and 1 edge with properties to match
+        # Create 2 nodes and 1 relationship with properties to match
         self.graph = self.parser.parse_query(self.graph, self.queries[15])
         self.graph = self.parser.parse_query(self.graph, self.queries[16])
         self.graph = self.parser.parse_query(self.graph, self.queries[17])
@@ -179,6 +179,6 @@ class ParserCase(TestCase):
         retrieved_objects = self.parser.parse_query(self.graph, self.queries[20])
         self.assertEqual(2, len(retrieved_objects), 'Incorrect number of matched nodes')
 
-        # Edge
+        # Relationship
         retrieved_objects = self.parser.parse_query(self.graph, self.queries[21])
-        self.assertEqual(1, len(retrieved_objects), 'Incorrect number of matched edges')
+        self.assertEqual(1, len(retrieved_objects), 'Incorrect number of matched relationships')
