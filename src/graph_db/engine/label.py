@@ -1,7 +1,13 @@
+from graph_db.engine.types import INVALID_ID
+
+
 class Label:
     """ Label of node or relationship. """
 
-    def __init__(self, name: str, id: int = -1, used: bool = True):
+    def __init__(self,
+                 name: str,
+                 id: int = INVALID_ID,
+                 used: bool = True):
         self._id = id
         self._name = name
         self._used = used
@@ -23,3 +29,6 @@ class Label:
 
     def is_used(self) -> bool:
         return self._used
+
+    def __str__(self) -> str:
+        return f'{self._name}'

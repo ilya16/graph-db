@@ -1,20 +1,12 @@
 from typing import Dict
 
-from graph_db.engine.label import Label
-from graph_db.engine.node import Node
-from graph_db.engine.property import Property
-from graph_db.engine.relationship import Relationship
 from graph_db.engine.types import *
 from graph_db.fs.record import Record
-from .decoder import RecordDecoder
-from .encoder import RecordEncoder
-from .graph_storage import NodeStorage, RelationshipStorage
 from .worker import Worker
 
 
 # TODO: distribution of data across different workers based on ids
 # TODO: connections with remote machines
-
 
 class DBFSManager:
     """
@@ -61,58 +53,46 @@ class DBFSManager:
         """
         return self.stats
 
-    def write_node_record(self, node_record: Record):
+    def write_record(self, record: Record, storage_type: str, update: bool = False):
         """
-        Prepares node records and select appropriate node storage.
-        :param node_record:    node record object
+        Prepares records and select appropriate storage.
+        :param record:          record object
+        :param storage_type:    type of storage
+        :param update:          is it an update of previous record or not
         """
-        # TODO: insert label, properties first
         worker = self.workers[0]     # one local worker with storage
 
-        node_record.set_index(self.stats[NodeStorage.__qualname__])
-        worker.write_node_record(node_record)
+        # Reassign record_id for a worker
+        if not update:
+            # TODO: in dfs should be mapped
+            record.set_index(self.stats[storage_type])
+        else:
+            pass
+
+        worker.write_record(record, storage_type, update=update)
 
         # if ok:
-        self.stats[NodeStorage.__qualname__] += 1
+        if record.idx == self.stats[storage_type]:
+            self.stats[storage_type] += 1
 
-    def read_node_record(self, node_id: int):
+    def read_record(self, record_id: int, storage_type: str):
         """
-        Selects node with `id` from the appropriate storage.
+        Selects record with `id` from the appropriate storage.
+        :param record_id:       record id
+        :param storage_type     storage type
         :return:
         """
         worker = self.workers[0]    # one local worker with storage
 
         try:
-            node_record = worker.read_node_record(node_id)
+            record = worker.read_record(record_id, storage_type)
         except AssertionError as e:
             print(f'Error at Worker #0: {e}')
             # should be rethrown
-            node_record = None
+            record = None
 
-        return node_record
+        return record
 
-    # TODO: rename & implement
-
-    def read_label_record(self, label_id):
-        pass
-
-    def update_node_record(self, node: Node):
-        pass
-
-    def insert_relationship(self, rel: Relationship):
-        pass
-
-    def select_relationship(self, rel_id: int) -> Relationship:
-        pass
-
-    def update_relationship(self, rel: Relationship):
-        pass
-
-    def insert_property(self, prop: Property):
-        pass
-
-    def select_property(self, prop_id: int) -> Property:
-        pass
-
-    def update_property(self, prop: Property):
-        pass
+    def close(self):
+        for worker in self.workers:
+            worker.close()

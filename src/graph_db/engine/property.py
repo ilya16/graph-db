@@ -1,13 +1,20 @@
-from graph_db.engine.types import DB_TYPE
+from graph_db.engine.types import INVALID_ID, DB_TYPE
 
 
 class Property:
     """ Property of node or relationship. """
 
-    def __init__(self, key: DB_TYPE, value: DB_TYPE, id: int = 0):
+    def __init__(self,
+                 key: DB_TYPE,
+                 value: DB_TYPE,
+                 id: int = INVALID_ID,
+                 used: bool = True,
+                 next_property: 'Property' = None):
         self._id = id
         self._key = key
         self._value = value
+        self._used = used
+        self._next_property = next_property
 
     def set_id(self, id: int):
         self._id = id
@@ -26,3 +33,18 @@ class Property:
 
     def get_value(self) -> DB_TYPE:
         return self._value
+
+    def set_used(self, used: bool):
+        self._used = used
+
+    def is_used(self) -> bool:
+        return self._used
+
+    def set_next_property(self, next_property):
+        self._next_property = next_property
+
+    def get_next_property(self):
+        return self._next_property
+
+    def __str__(self) -> str:
+        return f'{self._key}:{self._value}'
