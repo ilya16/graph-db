@@ -81,8 +81,6 @@ class RecordEncoder:
         first_prop_id = rel.get_first_property().get_id() if rel.get_first_property() else INVALID_ID
         rel_bytes += RecordEncoder._encode_int(first_prop_id)
 
-        rel_bytes += RecordEncoder._encode_bool(rel.is_used())
-
         record = Record(rel_bytes, rel.get_id())
 
         assert record.size == RELATIONSHIP_RECORD_SIZE
@@ -113,7 +111,7 @@ class RecordEncoder:
         return record
 
     @staticmethod
-    def encode_property(used: bool, key_id: int, value_id: int, next_prop_id: int = -1) -> Record:
+    def encode_property(prop_id: int, used: bool, key_id: int, value_id: int, next_prop_id: int = INVALID_ID) -> Record:
         """
         Encodes property into a physical property record.
         Property record format:
@@ -122,6 +120,7 @@ class RecordEncoder:
             4 bytes     `value_id` – pointer to value data in dynamic storage
             4 bytes     `next_prop_id` – pointer to `id` of next property
         Total: 13 bytes
+        :param prop_id      id of the property
         :param used:        is property used or not
         :param key_id       property `key_id` in dynamic storage
         :param value_id     property `value_id` in dynamic storage
@@ -139,7 +138,7 @@ class RecordEncoder:
 
         property_bytes += RecordEncoder._encode_int(next_prop_id)
 
-        record = Record(property_bytes, -1)
+        record = Record(property_bytes, prop_id)
 
         assert record.size == PROPERTY_RECORD_SIZE
 
