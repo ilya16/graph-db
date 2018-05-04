@@ -24,7 +24,7 @@ class Graph:
         self.labels = {}
         self.ids_nodes = dict()
         self.properties = dict()
-        self.ids_edges = dict()
+        self.ids_relationships = dict()
 
     def get_stats(self):
         return self.io_engine.get_stats()
@@ -35,7 +35,7 @@ class Graph:
     def create_node(self, label_name: str, properties=list()):
         return self.insert_node(label_name, properties)
 
-    def create_edge(self, label_name: str, start_node: Node, end_node: Node, properties=list()):
+    def create_relationship(self, label_name: str, start_node: Node, end_node: Node, properties=list()):
         return self.insert_relationship(label_name, start_node, end_node, properties)
 
     def create_property(self, obj: Union[Node, Relationship], prop: Property):
@@ -92,10 +92,10 @@ class Graph:
             # update end node if this relation is first for end node
             self.io_engine.update_node(end_node)
 
-        if label_name in self.ids_edges:
-            self.ids_edges[label_name].append(rel)
+        if label_name in self.ids_relationships:
+            self.ids_relationships[label_name].append(rel)
         else:
-            self.ids_edges[label_name] = [rel]
+            self.ids_relationships[label_name] = [rel]
 
         self.relationships[rel.get_id()] = rel
 
@@ -158,11 +158,23 @@ class Graph:
 
         return properties
 
-    def select_edge_by_label(self, label):
-        return self.ids_edges[label]
+    def select_relationship_by_label(self, label):
+        return self.ids_relationships[label]
 
     def select_node_by_label(self, label):
         return self.ids_nodes[label]
+
+    def select_relationship_by_id(self, node_id):
+        if node_id in self.nodes:
+            return self.nodes[node_id]
+        else:
+            return None
+
+    def select_node_by_id(self, rel_id):
+        if rel_id in self.nodes:
+            return self.nodes[rel_id]
+        else:
+            return None
 
     def select_with_condition(self, key, value, cond, match_of):
         objects = []
@@ -174,31 +186,31 @@ class Graph:
                     for obj in self.properties[prop]:
                         if match_of == 'node' and type(obj) is Node:
                             objects.append(obj)
-                        elif match_of == 'edge' and type(obj) is Relationship:
+                        elif match_of == 'relationship' and type(obj) is Relationship:
                             objects.append(obj)
                 elif cond == '>' and int(prop_value) > int(value):
                     for obj in self.properties[prop]:
                         if match_of == 'node' and type(obj) is Node:
                             objects.append(obj)
-                        elif match_of == 'edge' and type(obj) is Relationship:
+                        elif match_of == 'relationship' and type(obj) is Relationship:
                             objects.append(obj)
                 elif cond == '<' and int(prop_value) < int(value):
                     for obj in self.properties[prop]:
                         if match_of == 'node' and type(obj) is Node:
                             objects.append(obj)
-                        elif match_of == 'edge' and type(obj) is Relationship:
+                        elif match_of == 'relationship' and type(obj) is Relationship:
                             objects.append(obj)
                 elif cond == '>=' and int(prop_value) >= int(value):
                     for obj in self.properties[prop]:
                         if match_of == 'node' and type(obj) is Node:
                             objects.append(obj)
-                        elif match_of == 'edge' and type(obj) is Relationship:
+                        elif match_of == 'relationship' and type(obj) is Relationship:
                             objects.append(obj)
                 elif cond == '<=' and int(prop_value) <= int(value):
                     for obj in self.properties[prop]:
                         if match_of == 'node' and type(obj) is Node:
                             objects.append(obj)
-                        elif match_of == 'edge' and type(obj) is Relationship:
+                        elif match_of == 'relationship' and type(obj) is Relationship:
                             objects.append(obj)
         return objects
 
@@ -207,8 +219,8 @@ class Graph:
         for node in self.ids_nodes:
             for n in self.ids_nodes[node]:
                 objects.append(n)
-        for edge in self.ids_edges:
-            for e in self.ids_edges[edge]:
+        for relationship in self.ids_relationships:
+            for e in self.ids_relationships[relationship]:
                 objects.append(e)
         return objects
 
