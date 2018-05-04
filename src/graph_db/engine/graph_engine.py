@@ -17,7 +17,7 @@ class GraphEngine(Engine):
         self.io_engine.add_worker(Worker(base_path=base_dir))
 
         # graph object
-        self.graph = Graph('init')
+        self.graph = None
 
         # small indexes
         self.label_names = dict()
@@ -32,12 +32,14 @@ class GraphEngine(Engine):
         stats = self.get_stats()
         for storage_type in stats:
             if stats[storage_type] != 0:
+                self.graph = Graph('init')
                 self.graph.set_empty(False)
                 break
 
-        self.graph.set_consistent(False)
-        # TODO: read data from disk
-        self.graph.set_consistent(True)
+        if self.graph:
+            self.graph.set_consistent(False)
+            # TODO: read data from disk
+            self.graph.set_consistent(True)
 
     def get_stats(self):
         return self.io_engine.get_stats()
@@ -52,7 +54,10 @@ class GraphEngine(Engine):
     def get_graph(self) -> Graph:
         return self.graph
 
-    def create_node(self, label_name: str,
+    # Create
+
+    def create_node(self,
+                    label_name: str,
                     properties: List[Property] = None):
         # label
         label = self._insert_label(label_name)
@@ -77,7 +82,8 @@ class GraphEngine(Engine):
 
         return node
 
-    def create_relationship(self, label_name: str,
+    def create_relationship(self,
+                            label_name: str,
                             start_node: Node,
                             end_node: Node,
                             properties: List[Property] = None):
@@ -138,6 +144,8 @@ class GraphEngine(Engine):
         else:
             return None
 
+    # Select
+
     def select_node(self, node_id: int) -> Node:
         node = self.graph.get_node(node_id)
         if node is None:
@@ -190,6 +198,54 @@ class GraphEngine(Engine):
             pass
         return list(self.graph.get_labels().values())
 
+    # Update
+
+    def update_node(self, node_id, prop):
+        node = self.select_node_by_id(node_id)
+        if node is not None:
+            p = {prop.get_key(): prop.get_value()}
+            key = frozenset(p.items())
+            if key in self.properties:
+                self.properties[key].append(node)
+            else:
+                self.properties[key] = [node]
+            node.add_property(prop)
+            return self.io_engine.update_node(node)
+        else:
+            return None
+
+    def update_relationship(self, rel_id, prop):
+        rel = self.select_relationship_by_id(rel_id)
+        if rel is not None:
+            p = {prop.get_key(): prop.get_value()}
+            key = frozenset(p.items())
+            if key in self.properties:
+                self.properties[key].append(rel)
+            else:
+                self.properties[key] = [rel]
+            rel.add_property(prop)
+            return self.io_engine.update_relationship(rel)
+        else:
+            return None
+
+    # Delete
+
+    def delete_node(self, node_id):
+        node = self.select_node(node_id)
+        if node is not None:
+            node.set_used(False)
+            return self.io_engine.update_node(node)
+        else:
+            return None
+
+    def delete_relationship(self, rel_id):
+        rel = self.select_relationship(rel_id)
+        if rel is not None:
+            rel.set_used(False)
+            return self.io_engine.update_relationship(rel)
+        else:
+            return None
+
     # Parametrized queries
 
     def select_edge_by_label(self, label):
@@ -208,33 +264,37 @@ class GraphEngine(Engine):
                     for obj in self.properties[prop]:
                         if match_of == 'node' and isinstance(obj, Node):
                             objects.append(obj)
-                        elif match_of == 'edge' and isinstance(obj, Relationship):
+                        elif match_of == 'relationship' and isinstance(obj, Relationship):
                             objects.append(obj)
                 elif cond == '>' and int(prop_value) > int(value):
                     for obj in self.properties[prop]:
                         if match_of == 'node' and isinstance(obj, Node):
                             objects.append(obj)
-                        elif match_of == 'edge' and isinstance(obj, Relationship):
+                        elif match_of == 'relationship' and isinstance(obj, Relationship):
                             objects.append(obj)
                 elif cond == '<' and int(prop_value) < int(value):
                     for obj in self.properties[prop]:
                         if match_of == 'node' and isinstance(obj, Node):
                             objects.append(obj)
-                        elif match_of == 'edge' and isinstance(obj, Relationship):
+                        elif match_of == 'relationship' and isinstance(obj, Relationship):
                             objects.append(obj)
                 elif cond == '>=' and int(prop_value) >= int(value):
                     for obj in self.properties[prop]:
                         if match_of == 'node' and isinstance(obj, Node):
                             objects.append(obj)
-                        elif match_of == 'edge' and isinstance(obj, Relationship):
+                        elif match_of == 'relationship' and isinstance(obj, Relationship):
                             objects.append(obj)
                 elif cond == '<=' and int(prop_value) <= int(value):
                     for obj in self.properties[prop]:
                         if match_of == 'node' and isinstance(obj, Node):
                             objects.append(obj)
-                        elif match_of == 'edge' and isinstance(obj, Relationship):
+                        elif match_of == 'relationship' and isinstance(obj, Relationship):
                             objects.append(obj)
         return objects
+
+    def select_by_property(self, key, value):
+        # TODO: oops, deleted, or was not present? :(
+        pass
 
     def traverse_graph(self):
         objects = []
