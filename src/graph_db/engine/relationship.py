@@ -127,9 +127,10 @@ class Relationship:
         return self._used
 
     def __str__(self) -> str:
+        properties_str = " ".join(map(str, self._properties)) if self._properties else None
         return f'Edge #{self._id} = {{' \
                f'label: {self._label}, ' \
-               f'first_property: {self.get_first_property()}, ' \
+               f'properties: {properties_str}, ' \
                f'start_node: {self.get_start_node()}, ' \
                f'end_node: {self.get_end_node()}, ' \
                f'used: {self._used}' \
