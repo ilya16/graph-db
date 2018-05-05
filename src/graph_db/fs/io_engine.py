@@ -5,11 +5,20 @@ from graph_db.engine.node import Node
 from graph_db.engine.property import Property
 from graph_db.engine.relationship import Relationship
 from graph_db.engine.types import *
-from .manager import DBFSManager
+#from .manager import DBFSManager
 from .decoder import RecordDecoder
 from .encoder import RecordEncoder
-from .worker import Worker
+#from .worker import Worker
+import logging
+import os
 
+from multiprocessing import Process
+import rpyc
+from .conf import DEFAULT_MANAGER_PORTS, DEFAULT_WORKER_PORTS
+from .manager import startManagerService
+from .worker import startWorkerService
+import time
+import sys
 
 # TODO: distribution of data across different workers based on ids
 # TODO: connections with remote machines
@@ -21,10 +30,72 @@ class IOEngine:
     Processes graph database queries on IO level.
     """
     def __init__(self, base_path: str = MEMORY):
-        self.dbfs_manager = DBFSManager(base_path)
 
-    def add_worker(self, worker: Worker):
-        self.dbfs_manager.add_worker(worker)
+        self.worker_pool = {}
+        self.manager_pool = {}
+
+        self.conf_setup()
+
+        self.con = rpyc.connect('localhost', 2131, config={'sync_request_timeout':60})
+        self.manager = self.con.root.Manager()
+        if not self.manager:
+            print('[Client] was not able to obtain connection to the cluster.')
+        #self.dbfs_manager = DBFSManager(base_path)
+
+    # Incorporated DFS features
+
+    def create_worker_node(self, port = None):
+        if port in self.worker_pool:
+            return
+        if not self.manager_pool:
+            return
+        if not port:
+            ports_in_use = self.worker_pool.keys()
+            port = DEFAULT_WORKER_PORTS[0]
+            while port in ports_in_use:
+                port = port + 1
+
+        self.worker_pool[port] = Process(target=startWorkerService, args=(port, ))
+        self.worker_pool[port].start()
+        time.sleep(0.3)
+        self.con.root.Manager().add_worker('localhost', port)
+        print('Worker node created at localhost: {}'.format(port))
+
+    def create_manager_node(self, port=None):
+        if port in self.manager_pool:
+            return
+        if not port:
+            ports_in_use = self.manager_pool.keys()
+            port = DEFAULT_MANAGER_PORTS[0]
+            while port in ports_in_use:
+                port = port + 1
+
+        self.manager_pool[port] = Process(target=startManagerService, args=([], port))
+        self.manager_pool[port].start()
+        time.sleep(0.3)
+        print('Manager node created at localhost: {}'.format(port))
+
+    def get_all_processes(self):
+        for p in self.worker_pool:
+            yield self.worker_pool[p]
+        for p in self.manager_pool:
+            yield self.manager_pool[p]
+
+    def conf_setup(self):
+        for port in DEFAULT_MANAGER_PORTS:
+            self.create_manager_node(port)
+        for port in DEFAULT_WORKER_PORTS:
+            self.create_worker_node(port)
+
+
+    def print_processes(self, arg):
+        print('Manager: ')
+        print(self.manager_pool)
+        print('\nWorkers: ')
+        print(self.worker_pool)
+
+    # def add_worker(self, worker: Worker):
+    #     self.dbfs_manager.add_worker(worker)
 
     def close(self):
         self.dbfs_manager.close()
@@ -262,3 +333,9 @@ class IOEngine:
                 break
 
         return data
+
+    def stut_down(self, sig, frame):
+        for p in self.get_all_processes():
+            p.terminate()
+            print(p, 'terminated')
+        sys.exit(0)
