@@ -1,7 +1,8 @@
 from unittest import TestCase
 import os
 
-
+from graph_db.engine.node import Node
+from graph_db.engine.label import Label
 from graph_db.fs.io_engine import IOEngine
 
 
@@ -11,7 +12,7 @@ class ParserCase(TestCase):
         self.io_engine = IOEngine()
 
     def tearDown(self):
-        self.io_engine.stut_down()
+        self.io_engine.shut_down()
 
         # deleting created temp stores
         # for path in os.listdir(self.temp_dir):
@@ -26,5 +27,9 @@ class ParserCase(TestCase):
         stats = self.io_engine.get_stats()
         print(stats)
         self.assertEqual(0, stats['NodeStorage'])
-        print("hello")
 
+        label = Label(name="Bobbi", id=0)
+        node = Node(label=label)
+
+        self.io_engine.insert_node(node)
+        self.assertEqual(1, self.io_engine.get_stats()['NodeStorage'])

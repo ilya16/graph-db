@@ -13,7 +13,6 @@ import os
 
 class WorkerService(rpyc.Service):
     class exposed_Worker(object):
-
         """
         Worker Machine File System manager.
         Manages distribution of a portion of database across several stores.

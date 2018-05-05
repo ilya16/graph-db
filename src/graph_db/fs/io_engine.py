@@ -132,7 +132,8 @@ class IOEngine:
             node.set_id(self.get_stats()['NodeStorage'])
 
         node_record = RecordEncoder.encode_node(node)
-        self.dbfs_manager.write_record(node_record, 'NodeStorage', update=update)
+        print(node_record)
+        self.con.root.Manager().write_record(node_record, 'NodeStorage', update=update)
 
         return node
 
@@ -143,7 +144,7 @@ class IOEngine:
         :return:
         """
         try:
-            node_record = self.dbfs_manager.read_record(node_id, 'NodeStorage')
+            node_record = self.manager.read_record(node_id, 'NodeStorage')
             return RecordDecoder.decode_node_record(node_record)
         except AssertionError as e:
             print(f'Error at Worker #0: {e}')
@@ -175,7 +176,7 @@ class IOEngine:
             rel.set_id(self.get_stats()['RelationshipStorage'])
 
         relationship_record = RecordEncoder.encode_relationship(rel)
-        self.dbfs_manager.write_record(relationship_record, 'RelationshipStorage', update=update)
+        self.manager.write_record(relationship_record, 'RelationshipStorage', update=update)
 
         return rel
 
@@ -186,7 +187,7 @@ class IOEngine:
         :return:
         """
         try:
-            relationship_record = self.dbfs_manager.read_record(rel_id, 'RelationshipStorage')
+            relationship_record = self.manager.read_record(rel_id, 'RelationshipStorage')
             return RecordDecoder.decode_relationship_record(relationship_record)
         except AssertionError as e:
             print(f'Error at Worker #0: {e}')
@@ -221,7 +222,7 @@ class IOEngine:
         self._write_dynamic_data(label.get_name(), dynamic_id)
 
         label_record = RecordEncoder.encode_label(label, dynamic_id)
-        self.dbfs_manager.write_record(label_record, 'LabelStorage', update=update)
+        self.manager.write_record(label_record, 'LabelStorage', update=update)
 
         return label
 
@@ -232,7 +233,7 @@ class IOEngine:
         :param label_id:
         :return:
         """
-        label_record = self.dbfs_manager.read_record(label_id, 'LabelStorage')
+        label_record = self.manager.read_record(label_id, 'LabelStorage')
         label_data = RecordDecoder.decode_label_record(label_record)
 
         label_data['label_name'] = self._build_dynamic_data(label_data['dynamic_id'])
@@ -264,7 +265,7 @@ class IOEngine:
             prop.set_id(self.get_stats()['PropertyStorage'])
 
         if update:
-            old_property_record = self.dbfs_manager.read_record(prop.get_id(), 'PropertyStorage')
+            old_property_record = self.manager.read_record(prop.get_id(), 'PropertyStorage')
             old_property_data = RecordDecoder.decode_property_record(old_property_record)
 
             key_dynamic_id = old_property_data['key_id']
@@ -294,7 +295,7 @@ class IOEngine:
                                                         key_id=key_dynamic_id,
                                                         value_id=value_dynamic_id,
                                                         next_prop_id=next_prop_id)
-        self.dbfs_manager.write_record(property_record, 'PropertyStorage', update=update)
+        self.manager.write_record(property_record, 'PropertyStorage', update=update)
 
         return prop
 
@@ -305,7 +306,7 @@ class IOEngine:
         :param prop_id:
         :return:
         """
-        property_record = self.dbfs_manager.read_record(prop_id, 'PropertyStorage')
+        property_record = self.manager.read_record(prop_id, 'PropertyStorage')
         property_data = RecordDecoder.decode_property_record(property_record)
 
         # String data now only
@@ -317,13 +318,13 @@ class IOEngine:
     def _write_dynamic_data(self, data, dynamic_id):
         dynamic_records = RecordEncoder.encode_dynamic_data(data, dynamic_id)
         for record in dynamic_records:
-            self.dbfs_manager.write_record(record, 'DynamicStorage')
+            self.manager.write_record(record, 'DynamicStorage')
 
     def _build_dynamic_data(self, dynamic_id):
         data = ''
         while True:
             # read from dynamic storage until all data is collected
-            dynamic_record = self.dbfs_manager.read_record(dynamic_id, 'DynamicStorage')
+            dynamic_record = self.manager.read_record(dynamic_id, 'DynamicStorage')
             dynamic_data = RecordDecoder.decode_dynamic_data_record(dynamic_record)
 
             data += dynamic_data['data']
@@ -334,7 +335,7 @@ class IOEngine:
 
         return data
 
-    def stut_down(self):
+    def shut_down(self):
         for p in self.get_all_processes():
             p.terminate()
             print(p, 'terminated')

@@ -40,6 +40,8 @@ class ManagerService(rpyc.Service):
         # Register the information of every minion
         workers = {}  # {'worker_id': (host, port)}
 
+        workers_conn_pool = {}  # {'worker_id': connection}
+
         manager_list = tuple()
 
         stores = {}
@@ -52,6 +54,7 @@ class ManagerService(rpyc.Service):
             else:
                 worker_id = max(self.__class__.workers) + 1
             self.__class__.workers[worker_id] = (host, port)
+            self.__class__.workers_conn_pool[worker_id] = rpyc.connect(host, port)
 
             # self.workers.append(worker)
             # for storage_type in worker.stores:
@@ -93,20 +96,20 @@ class ManagerService(rpyc.Service):
             :param storage_type:    type of storage
             :param update:          is it an update of previous record or not
             """
-            worker = self.workers[0]     # one local worker with storage
-
+            #worker = self.workers[0]     # one local worker with storage
+            worker = self.__class__.workers_conn_pool[0].root.Worker()
             # Reassign record_id for a worker
             if not update:
                 # TODO: in dfs should be mapped
-                record.set_index(self.stats[storage_type])
+                record.set_index(self.__class__.stats[storage_type])
             else:
                 pass
 
             worker.write_record(record, storage_type, update=update)
 
             # if ok:
-            if record.idx == self.stats[storage_type]:
-                self.stats[storage_type] += 1
+            if record.idx == self.__class__.stats[storage_type]:
+                self.__class__.stats[storage_type] += 1
 
         def exposed_read_record(self, record_id: int, storage_type: str):
             """
