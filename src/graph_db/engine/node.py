@@ -55,6 +55,10 @@ class Node:
         assert self == rel.get_start_node() or self == rel.get_end_node()
         self._relationships.append(rel)
 
+    def remove_relationship(self, rel):
+        assert rel in self._relationships
+        self._relationships.remove(rel)
+
     def get_relationships(self):
         return self._relationships
 
@@ -69,6 +73,13 @@ class Node:
 
     def is_used(self) -> bool:
         return self._used
+
+    def remove_dependencies(self):
+        for rel in self._relationships:
+            rel
+
+        start_node.remove_relationship(self)
+        end_node.remove_relationship(self)
 
     def __str__(self) -> str:
         properties_str = " ".join(map(str, self._properties)) if self._properties else None

@@ -42,26 +42,26 @@ class Relationship:
         start_node = self._start_node
         end_node = self._end_node
 
-        start_node_prev_rel = start_node.get_last_relationship()
-        if start_node_prev_rel:
-            assert start_node == start_node_prev_rel.get_start_node() \
-                   or start_node == start_node_prev_rel.get_end_node()
-            if start_node == start_node_prev_rel.get_start_node():
-                start_node_prev_rel.set_start_next_rel(self)
+        start_prev_rel = start_node.get_last_relationship()
+        if start_prev_rel:
+            assert start_node == start_prev_rel.get_start_node() \
+                   or start_node == start_prev_rel.get_end_node()
+            if start_node == start_prev_rel.get_start_node():
+                start_prev_rel.set_start_next_rel(self)
             else:
-                start_node_prev_rel.set_end_next_rel(self)
-            self.set_start_prev_rel(start_node_prev_rel)
+                start_prev_rel.set_end_next_rel(self)
+            self.set_start_prev_rel(start_prev_rel)
         start_node.add_relationship(self)
 
-        end_node_prev_rel = end_node.get_last_relationship()
-        if end_node_prev_rel:
-            assert start_node == end_node_prev_rel.get_start_node() \
-                   or start_node == end_node_prev_rel.get_end_node()
-            if start_node == end_node_prev_rel.get_start_node():
-                end_node_prev_rel.set_start_next_rel(self)
+        end_prev_rel = end_node.get_last_relationship()
+        if end_prev_rel:
+            assert end_node == end_prev_rel.get_start_node() \
+                   or end_node == end_prev_rel.get_end_node()
+            if end_node == end_prev_rel.get_start_node():
+                end_prev_rel.set_start_next_rel(self)
             else:
-                end_node_prev_rel.set_end_next_rel(self)
-            self.set_end_prev_rel(end_node_prev_rel)
+                end_prev_rel.set_end_next_rel(self)
+            self.set_end_prev_rel(end_prev_rel)
         end_node.add_relationship(self)
 
     def set_id(self, id: int):
@@ -125,6 +125,45 @@ class Relationship:
 
     def is_used(self) -> bool:
         return self._used
+
+    def remove_dependencies(self):
+        start_node = self._start_node
+        end_node = self._end_node
+
+        start_prev_rel = self.get_start_prev_rel()
+        start_next_rel = self.get_start_next_rel()
+        end_prev_rel = self.get_end_prev_rel()
+        end_next_rel = self.get_end_next_rel()
+
+        if start_prev_rel:
+            if start_node == start_prev_rel.get_start_node():
+                start_prev_rel.set_start_next_rel(start_next_rel)
+            else:
+                start_prev_rel.set_end_next_rel(start_next_rel)
+            if start_next_rel:
+                if start_node == start_next_rel.get_start_node():
+                    start_next_rel.set_start_prev_rel(start_prev_rel)
+                else:
+                    start_next_rel.set_end_prev_rel(start_prev_rel)
+
+        if end_prev_rel:
+            if end_node == end_prev_rel.get_start_node():
+                end_prev_rel.set_start_next_rel(end_next_rel)
+            else:
+                end_prev_rel.set_end_next_rel(end_next_rel)
+            if end_next_rel:
+                if end_node == end_next_rel.get_start_node():
+                    end_next_rel.set_start_prev_rel(end_prev_rel)
+                else:
+                    end_next_rel.set_end_prev_rel(end_prev_rel)
+
+        self.set_start_prev_rel(None)
+        self.set_start_next_rel(None)
+        self.set_end_prev_rel(None)
+        self.set_end_next_rel(None)
+
+        start_node.remove_relationship(self)
+        end_node.remove_relationship(self)
 
     def __str__(self) -> str:
         properties_str = " ".join(map(str, self._properties)) if self._properties else None

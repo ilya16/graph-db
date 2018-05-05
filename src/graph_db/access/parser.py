@@ -148,10 +148,12 @@ class Parser:
             try:
                 if to_update == 'node:':
                     node_id = int(third_term[3:])
-                    return GraphEngine.update_node, {'node_id': node_id, 'prop': Property(key, value)}
+                    return GraphEngine.add_property, {'obj': (GraphEngine.select_node, {'node_id': node_id}),
+                                                      'prop': Property(key, value)}
                 elif to_update == 'relationship:':
                     rel_id = int(third_term[3:])
-                    return GraphEngine.update_relationship, {'rel_id': rel_id, 'prop': Property(key, value)}
+                    return GraphEngine.add_property, {'obj': (GraphEngine.select_relationship(), {'rel_id': rel_id}),
+                                                      'prop': Property(key, value)}
             except Exception:
                 raise InputError('Incorrect query')
 

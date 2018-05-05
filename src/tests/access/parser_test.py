@@ -39,7 +39,9 @@ class ParserCase(TestCase):
         'create relationship: ab from a to b',
         'delete relationship: id:5',
         'match relationship: ab',
-        'match relationship: id:5'
+        'match relationship: id:5',
+        'create relationship: catches from id:17 to id:18',
+        'update node: id:3 color:brown'
     ]
 
     queries_invalid = [
@@ -53,7 +55,7 @@ class ParserCase(TestCase):
         'match node',
         'create relationship: catches',
         'create relationship: catches from Cat',
-        'create relationship: catches from id:3 to id:4',
+        'create relationship: catches from to id:4',
         'create node: Jerry Animal:',
         'create node: Tom Animal',
         'create node: Tom :Cat',
@@ -168,16 +170,16 @@ class ParserCase(TestCase):
         retrieved_node = self.graph_engine.select_node(node_id=3)
         self.assertEqual(3, retrieved_node.get_id(), 'Node id is incorrect')
         prop = retrieved_node.get_first_property()
-        self.assertEqual(prop._key, 'Animal', 'Key of property is incorrect')
-        self.assertEqual(prop._value, 'Mouse', 'Value of property is incorrect')
+        self.assertEqual('Animal', prop.get_key(), 'Key of property is incorrect')
+        self.assertEqual('Mouse', prop.get_value(), 'Value of property is incorrect')
 
         func, params = self.parser.parse_query(self.queries[9])
         self.query_executor.execute(self.graph_engine, func, **params)
         retrieved_node = self.graph_engine.select_node(node_id=4)
         self.assertEqual(4, retrieved_node.get_id(), 'Node id is incorrect')
         prop = retrieved_node.get_first_property()
-        self.assertEqual(prop._key, 'Animal', 'Key of property is incorrect')
-        self.assertEqual(prop._value, 'Cat', 'Value of property is incorrect')
+        self.assertEqual('Animal', prop.get_key(), 'Key of property is incorrect')
+        self.assertEqual('Cat', prop.get_value(), 'Value of property is incorrect')
 
         # Create relationships with property
         func, params = self.parser.parse_query(self.queries[10])
@@ -185,16 +187,16 @@ class ParserCase(TestCase):
         retrieved_relationship = self.graph_engine.select_relationship(rel_id=1)
         self.assertEqual(1, retrieved_relationship.get_id(), 'relationship id is incorrect')
         prop = retrieved_relationship.get_first_property()
-        self.assertEqual(prop._key, 'Durability', 'Key of property is incorrect')
-        self.assertEqual(prop._value, '2', 'Value of property is incorrect')
+        self.assertEqual('Durability', prop.get_key(), 'Key of property is incorrect')
+        self.assertEqual('2', prop.get_value(), 'Value of property is incorrect')
 
         func, params = self.parser.parse_query(self.queries[11])
         self.query_executor.execute(self.graph_engine, func, **params)
         retrieved_relationship = self.graph_engine.select_relationship(rel_id=2)
         self.assertEqual(2, retrieved_relationship.get_id(), 'relationship id is incorrect')
         prop = retrieved_relationship.get_first_property()
-        self.assertEqual(prop._key, 'Time', 'Key of property is incorrect')
-        self.assertEqual(prop._value, '10', 'Value of property is incorrect')
+        self.assertEqual('Time', prop.get_key(), 'Key of property is incorrect')
+        self.assertEqual('10', prop.get_value(), 'Value of property is incorrect')
 
         # Create a node with multiple properties
         func, params = self.parser.parse_query(self.queries[12])
@@ -252,7 +254,7 @@ class ParserCase(TestCase):
         self.assertIsInstance(result, list)
         self.assertEqual(1, len(result), 'Incorrect number of matched relationships')
 
-        # Unexisting objects
+        # Not existing objects
         func, params = self.parser.parse_query(self.queries[22])
         result = self.query_executor.execute(self.graph_engine, func, **params)
         self.assertIsInstance(result, list)
@@ -272,13 +274,30 @@ class ParserCase(TestCase):
         self.query_executor.execute(self.graph_engine, func, **params)
         func, params = self.parser.parse_query(self.queries[27])
         self.query_executor.execute(self.graph_engine, func, **params)
+
         func, params = self.parser.parse_query(self.queries[28])
         result = self.query_executor.execute(self.graph_engine, func, **params)
+        self.assertIsInstance(result, list)
         self.assertEqual(0, len(result), 'Relationship was not deleted')
-        func, params = self.parser.parse_query(self.queries[29])
-        result = self.query_executor.execute(self.graph_engine, func, **params)
-        self.assertIsInstance(result, None)
-        # self.assertEqual(0, len(result), 'Relationship was not deleted')
+
+        with self.assertRaises(GraphEngineError):
+            func, params = self.parser.parse_query(self.queries[29])
+            self.query_executor.execute(self.graph_engine, func, **params)
+
+        # Create relationship for invalid nodes
+        with self.assertRaises(GraphEngineError):
+            func, params = self.parser.parse_query(self.queries[30])
+            self.query_executor.execute(self.graph_engine, func, **params)
+
+        func, params = self.parser.parse_query(self.queries[31])
+        self.query_executor.execute(self.graph_engine, func, **params)
+        retrieved_node = self.graph_engine.select_node(node_id=3)
+        prop = retrieved_node.get_first_property()
+        self.assertEqual('Animal', prop.get_key(), 'Key of property is incorrect')
+        self.assertEqual('Mouse', prop.get_value(), 'Value of property is incorrect')
+        prop = retrieved_node.get_last_property()
+        self.assertEqual('color', prop.get_key(), 'Key of property is incorrect')
+        self.assertEqual('brown', prop.get_value(), 'Value of property is incorrect')
 
     def test_queries_invalid(self):
         # Graph creation
@@ -317,9 +336,8 @@ class ParserCase(TestCase):
         with self.assertRaises(InputError):
             self.parser.parse_query(self.queries_invalid[9])
 
-        with self.assertRaises(GraphEngineError):
-            func, params = self.parser.parse_query(self.queries_invalid[10])
-            self.query_executor.execute(self.graph_engine, func, **params)
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[10])
 
         # Create nodes with property
         with self.assertRaises(InputError):
