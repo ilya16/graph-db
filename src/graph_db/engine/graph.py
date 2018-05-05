@@ -24,6 +24,9 @@ class Graph:
     def delete_node(self, node_id):
         del self._nodes[node_id]
 
+    def delete_relationship(self, rel_id):
+        del self._relationships[rel_id]
+
     def add_node(self, node: Node):
         self._nodes[node.get_id()] = node
 

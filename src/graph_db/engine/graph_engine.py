@@ -260,6 +260,7 @@ class GraphEngine(Engine):
         rel = self.select_relationship(rel_id)
         if rel:
             rel.set_used(False)
+            self.graph.delete_relationship(rel_id)
             return self.io_engine.update_relationship(rel)
         else:
             raise GraphEngineError(f'RelationshipNotFoundError: Relationship #{rel_id} was not found')
