@@ -156,7 +156,7 @@ class GraphEngine(Engine):
             # node = self.io_engine.select_node(node_id)
             self._collect_objects(entry_obj_id=node_id, obj_type='Node')
             node = self.graph.get_node(node_id)
-            if not node.is_used():
+            if node is None or not node.is_used():
                 raise GraphEngineError(f'NodeNotFoundError: Node #{node_id} was not found')
         if not node:
             raise GraphEngineError(f'NodeNotFoundError: Node #{node_id} was not found')
@@ -181,7 +181,8 @@ class GraphEngine(Engine):
             # rel = self.io_engine.select_relationship(rel_id)
             self._collect_objects(entry_obj_id=rel_id, obj_type='Relationship')
             rel = self.graph.get_relationship(rel_id)
-
+            if rel is None or not rel.is_used():
+                raise GraphEngineError(f'RelationshipNotFoundError: Relationship #{rel_id} was not found')
         if not rel:
             raise GraphEngineError(f'RelationshipNotFoundError: Relationship #{rel_id} was not found')
 
@@ -252,6 +253,7 @@ class GraphEngine(Engine):
         if node:
             node.set_used(False)
             self.graph.delete_node(node_id)
+            del self.node_labels[node.get_label().get_name()]
             return self.io_engine.update_node(node)
         else:
             raise GraphEngineError(f'NodeNotFoundError: Node #{node_id} was not found')
@@ -261,6 +263,7 @@ class GraphEngine(Engine):
         if rel:
             rel.set_used(False)
             self.graph.delete_relationship(rel_id)
+            del self.rel_labels[rel.get_label().get_name()]
             return self.io_engine.update_relationship(rel)
         else:
             raise GraphEngineError(f'RelationshipNotFoundError: Relationship #{rel_id} was not found')

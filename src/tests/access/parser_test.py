@@ -34,6 +34,12 @@ class ParserCase(TestCase):
         'match relationship: since=2015',
         'match node: Cats',
         'match relationship: False',
+        'create node: a',
+        'create node: b',
+        'create relationship: ab from a to b',
+        'delete relationship: id:5',
+        'match relationship: ab',
+        'match relationship: id:5'
     ]
 
     queries_invalid = [
@@ -256,6 +262,23 @@ class ParserCase(TestCase):
         result = self.query_executor.execute(self.graph_engine, func, **params)
         self.assertIsInstance(result, list)
         self.assertEqual(0, len(result), 'Incorrect number of matched nodes')
+
+        # Delete relationship
+        func, params = self.parser.parse_query(self.queries[24])
+        self.query_executor.execute(self.graph_engine, func, **params)
+        func, params = self.parser.parse_query(self.queries[25])
+        self.query_executor.execute(self.graph_engine, func, **params)
+        func, params = self.parser.parse_query(self.queries[26])
+        self.query_executor.execute(self.graph_engine, func, **params)
+        func, params = self.parser.parse_query(self.queries[27])
+        self.query_executor.execute(self.graph_engine, func, **params)
+        func, params = self.parser.parse_query(self.queries[28])
+        result = self.query_executor.execute(self.graph_engine, func, **params)
+        self.assertEqual(0, len(result), 'Relationship was not deleted')
+        func, params = self.parser.parse_query(self.queries[29])
+        result = self.query_executor.execute(self.graph_engine, func, **params)
+        self.assertIsInstance(result, None)
+        # self.assertEqual(0, len(result), 'Relationship was not deleted')
 
     def test_queries_invalid(self):
         # Graph creation
