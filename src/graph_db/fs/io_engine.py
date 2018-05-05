@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 
 from graph_db.engine.label import Label
 from graph_db.engine.node import Node
@@ -6,6 +6,7 @@ from graph_db.engine.property import Property
 from graph_db.engine.relationship import Relationship
 from graph_db.engine.types import *
 #from .manager import DBFSManager
+from graph_db.fs.error import RecordNotFoundError
 from .decoder import RecordDecoder
 from .encoder import RecordEncoder
 #from .worker import Worker
@@ -146,9 +147,8 @@ class IOEngine:
         try:
             node_record = self.manager.read_record(node_id, 'NodeStorage')
             return RecordDecoder.decode_node_record(node_record)
-        except AssertionError as e:
-            print(f'Error at Worker #0: {e}')
-            # should be rethrown
+        except RecordNotFoundError as e:
+            print(e)
             return dict()
 
     # Relationship
@@ -180,7 +180,7 @@ class IOEngine:
 
         return rel
 
-    def select_relationship(self, rel_id: int) -> Dict[str, DB_TYPE]:
+    def select_relationship(self, rel_id: object) -> object:
         """
         Selects relationship with `id` from the appropriate storage.
         Collects all data from other storages.
@@ -189,9 +189,8 @@ class IOEngine:
         try:
             relationship_record = self.manager.read_record(rel_id, 'RelationshipStorage')
             return RecordDecoder.decode_relationship_record(relationship_record)
-        except AssertionError as e:
-            print(f'Error at Worker #0: {e}')
-            # should be rethrown
+        except RecordNotFoundError as e:
+            print(e)
             return dict()
 
     # Label
@@ -233,10 +232,19 @@ class IOEngine:
         :param label_id:
         :return:
         """
-        label_record = self.manager.read_record(label_id, 'LabelStorage')
+        try:
+            label_record = self.manager.read_record(label_id, 'LabelStorage')
+        except RecordNotFoundError as e:
+            print(e)
+            return dict()
+
         label_data = RecordDecoder.decode_label_record(label_record)
 
-        label_data['label_name'] = self._build_dynamic_data(label_data['dynamic_id'])
+        name = self._build_dynamic_data(label_data['dynamic_id'])
+        if name:
+            label_data['name'] = name
+        else:
+            label_data = dict()
         return label_data
 
     # Property
@@ -278,7 +286,7 @@ class IOEngine:
                 # key has changed
                 key_dynamic_id = self.get_stats()['DynamicStorage']
                 self._write_dynamic_data(prop.get_key(), key_dynamic_id)
-            elif old_value != prop.get_key():
+            elif old_value != prop.get_value():
                 # value has changed
                 value_dynamic_id = self.get_stats()['DynamicStorage']
                 self._write_dynamic_data(prop.get_value(), value_dynamic_id)
@@ -306,7 +314,12 @@ class IOEngine:
         :param prop_id:
         :return:
         """
-        property_record = self.manager.read_record(prop_id, 'PropertyStorage')
+        try:
+            property_record = self.manager.read_record(prop_id, 'PropertyStorage')
+        except RecordNotFoundError as e:
+            print(e)
+            return dict()
+
         property_data = RecordDecoder.decode_property_record(property_record)
 
         # String data now only
@@ -320,11 +333,16 @@ class IOEngine:
         for record in dynamic_records:
             self.manager.write_record(record, 'DynamicStorage')
 
-    def _build_dynamic_data(self, dynamic_id):
+    def _build_dynamic_data(self, dynamic_id) -> Optional[DB_TYPE]:
         data = ''
         while True:
             # read from dynamic storage until all data is collected
-            dynamic_record = self.manager.read_record(dynamic_id, 'DynamicStorage')
+            try:
+                dynamic_record = self.manager.read_record(dynamic_id, 'DynamicStorage')
+            except RecordNotFoundError as e:
+                print(e)
+                return None
+            
             dynamic_data = RecordDecoder.decode_dynamic_data_record(dynamic_record)
 
             data += dynamic_data['data']
@@ -332,6 +350,16 @@ class IOEngine:
 
             if dynamic_id == INVALID_ID:
                 break
+
+        if data == 'True':
+            return True
+        elif data == 'False':
+            return False
+        else:
+            try:
+                data = int(data)
+            except ValueError:
+                pass
 
         return data
 

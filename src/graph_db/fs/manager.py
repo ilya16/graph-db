@@ -1,6 +1,7 @@
 from typing import Dict
 
 from graph_db.engine.types import *
+from graph_db.fs.error import RecordNotFoundError
 from graph_db.fs.record import Record
 #from .worker import Worker
 
@@ -124,8 +125,7 @@ class ManagerService(rpyc.Service):
                 record = worker.read_record(record_id, storage_type)
             except AssertionError as e:
                 print(f'Error at Worker #0: {e}')
-                # should be rethrown
-                record = None
+                raise RecordNotFoundError(f'Record with id:{record_id} was not found')
 
             return record
 
