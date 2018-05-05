@@ -303,3 +303,5 @@ class IOEngineCase(TestCase):
         self.assertEqual(1, retrieved_relationship.get_first_property().get_value(), 'Incorrect property\'s value')
         self.assertEqual(20, retrieved_relationship.get_end_node().get_properties()[1].get_value(),
                          'Incorrect end node property\'s value')
+
+

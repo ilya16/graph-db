@@ -1,12 +1,13 @@
-from typing import Union, List
+from typing import Union, List, Optional, Dict
 
 from graph_db.engine.engine import Engine
+from graph_db.engine.error import GraphEngineError
 from graph_db.engine.graph import Graph
 from graph_db.engine.label import Label
 from graph_db.engine.relationship import Relationship
 from graph_db.engine.node import Node
 from graph_db.engine.property import Property
-from graph_db.engine.types import INVALID_ID
+from graph_db.engine.types import INVALID_ID, DB_TYPE
 from graph_db.fs.io_engine import IOEngine
 from graph_db.fs.worker import Worker
 
@@ -17,7 +18,7 @@ class GraphEngine(Engine):
         self.io_engine.add_worker(Worker(base_path=base_dir))
 
         # graph object
-        self.graph = Graph('init')
+        self.graph = None
 
         # small indexes
         self.label_names = dict()
@@ -32,12 +33,14 @@ class GraphEngine(Engine):
         stats = self.get_stats()
         for storage_type in stats:
             if stats[storage_type] != 0:
+                self.graph = Graph('init')
                 self.graph.set_empty(False)
                 break
 
-        self.graph.set_consistent(False)
-        # TODO: read data from disk
-        self.graph.set_consistent(True)
+        if self.graph:
+            self.graph.set_consistent(False)
+            # TODO: read data from disk
+            self.graph.set_consistent(True)
 
     def get_stats(self):
         return self.io_engine.get_stats()
@@ -52,7 +55,10 @@ class GraphEngine(Engine):
     def get_graph(self) -> Graph:
         return self.graph
 
-    def create_node(self, label_name: str,
+    # Create
+
+    def create_node(self,
+                    label_name: str,
                     properties: List[Property] = None):
         # label
         label = self._insert_label(label_name)
@@ -77,10 +83,13 @@ class GraphEngine(Engine):
 
         return node
 
-    def create_relationship(self, label_name: str,
+    def create_relationship(self,
+                            label_name: str,
                             start_node: Node,
                             end_node: Node,
                             properties: List[Property] = None):
+        if not (start_node and end_node):
+            raise GraphEngineError('CreateRelationshipError: Start or End nodes for relationship were not found')
         # label
         label = self._insert_label(label_name)
 
@@ -138,23 +147,29 @@ class GraphEngine(Engine):
         else:
             return None
 
+    # Select
+
     def select_node(self, node_id: int) -> Node:
         node = self.graph.get_node(node_id)
         if node is None:
             # node = self.io_engine.select_node(node_id)
             self._collect_objects(entry_obj_id=node_id, obj_type='Node')
-        node = self.graph.get_node(node_id)
+            node = self.graph.get_node(node_id)
+
+        if not node:
+            raise GraphEngineError(f'NodeNotFoundError: Node #{node_id} was not found')
+
         return node
 
     def select_nodes(self, label: Label = None) -> List[Node]:
         if not self.graph.is_consistent():
             # TODO: collect absent data
             pass
-        nodes = list(self.graph.get_nodes().values())
 
         if label:
-            nodes = self.node_labels[label]
-            # nodes = filter(lambda n: n.get_label() == label, nodes)
+            nodes = self.node_labels[label] if label in self.node_labels else list()
+        else:
+            nodes = list(self.graph.get_nodes().values())
 
         return nodes
 
@@ -163,18 +178,22 @@ class GraphEngine(Engine):
         if rel is None:
             # rel = self.io_engine.select_relationship(rel_id)
             self._collect_objects(entry_obj_id=rel_id, obj_type='Relationship')
-        rel = self.graph.get_relationship(rel_id)
+            rel = self.graph.get_relationship(rel_id)
+
+        if not rel:
+            raise GraphEngineError(f'RelationshipNotFoundError: Relationship #{rel_id} was not found')
+
         return rel
 
     def select_relationships(self, label: Label = None) -> List[Relationship]:
         if not self.graph.is_consistent():
             # TODO: collect absent data
             pass
-        relationships = list(self.graph.get_relationships().values())
 
         if label:
-            relationships = self.rel_labels[label]
-            # relationships = filter(lambda r: r.get_label() == label, relationships)
+            relationships = self.rel_labels[label] if label in self.rel_labels else list()
+        else:
+            relationships = list(self.graph.get_relationships().values())
 
         return relationships
 
@@ -182,6 +201,10 @@ class GraphEngine(Engine):
         label = self.graph.get_label(label_id)
         if label is None:
             label = self._collect_label(label_id)
+
+        if not label:
+            raise GraphEngineError(f'LabelNotFoundError: Label #{label_id} was not found')
+
         return label
 
     def select_labels(self) -> List[Label]:
@@ -189,6 +212,54 @@ class GraphEngine(Engine):
             # TODO: collect absent data
             pass
         return list(self.graph.get_labels().values())
+
+    # Update
+
+    def update_node(self, node_id, prop):
+        node = self.select_node(node_id)
+        if node:
+            p = {prop.get_key(): prop.get_value()}
+            key = frozenset(p.items())
+            if key in self.properties:
+                self.properties[key].append(node)
+            else:
+                self.properties[key] = [node]
+            node.add_property(prop)
+            return self.io_engine.update_node(node)
+        else:
+            raise GraphEngineError(f'NodeNotFoundError: Node #{node_id} was not found')
+
+    def update_relationship(self, rel_id, prop):
+        rel = self.select_relationship(rel_id)
+        if rel:
+            p = {prop.get_key(): prop.get_value()}
+            key = frozenset(p.items())
+            if key in self.properties:
+                self.properties[key].append(rel)
+            else:
+                self.properties[key] = [rel]
+            rel.add_property(prop)
+            return self.io_engine.update_relationship(rel)
+        else:
+            raise GraphEngineError(f'RelationshipNotFoundError: Relationship #{rel_id} was not found')
+
+    # Delete
+
+    def delete_node(self, node_id):
+        node = self.select_node(node_id)
+        if node:
+            node.set_used(False)
+            return self.io_engine.update_node(node)
+        else:
+            raise GraphEngineError(f'NodeNotFoundError: Node #{node_id} was not found')
+
+    def delete_relationship(self, rel_id):
+        rel = self.select_relationship(rel_id)
+        if rel:
+            rel.set_used(False)
+            return self.io_engine.update_relationship(rel)
+        else:
+            raise GraphEngineError(f'RelationshipNotFoundError: Relationship #{rel_id} was not found')
 
     # Parametrized queries
 
@@ -208,31 +279,31 @@ class GraphEngine(Engine):
                     for obj in self.properties[prop]:
                         if match_of == 'node' and isinstance(obj, Node):
                             objects.append(obj)
-                        elif match_of == 'edge' and isinstance(obj, Relationship):
+                        elif match_of == 'relationship' and isinstance(obj, Relationship):
                             objects.append(obj)
                 elif cond == '>' and int(prop_value) > int(value):
                     for obj in self.properties[prop]:
                         if match_of == 'node' and isinstance(obj, Node):
                             objects.append(obj)
-                        elif match_of == 'edge' and isinstance(obj, Relationship):
+                        elif match_of == 'relationship' and isinstance(obj, Relationship):
                             objects.append(obj)
                 elif cond == '<' and int(prop_value) < int(value):
                     for obj in self.properties[prop]:
                         if match_of == 'node' and isinstance(obj, Node):
                             objects.append(obj)
-                        elif match_of == 'edge' and isinstance(obj, Relationship):
+                        elif match_of == 'relationship' and isinstance(obj, Relationship):
                             objects.append(obj)
                 elif cond == '>=' and int(prop_value) >= int(value):
                     for obj in self.properties[prop]:
                         if match_of == 'node' and isinstance(obj, Node):
                             objects.append(obj)
-                        elif match_of == 'edge' and isinstance(obj, Relationship):
+                        elif match_of == 'relationship' and isinstance(obj, Relationship):
                             objects.append(obj)
                 elif cond == '<=' and int(prop_value) <= int(value):
                     for obj in self.properties[prop]:
                         if match_of == 'node' and isinstance(obj, Node):
                             objects.append(obj)
-                        elif match_of == 'edge' and isinstance(obj, Relationship):
+                        elif match_of == 'relationship' and isinstance(obj, Relationship):
                             objects.append(obj)
         return objects
 
@@ -295,55 +366,56 @@ class GraphEngine(Engine):
             for node_id in node_ids_to_read:
                 if node_id != INVALID_ID:
                     node_data = self.io_engine.select_node(node_id)
+                    if node_data:
+                        if node_data['first_rel_id'] != INVALID_ID and node_data['first_rel_id'] not in relationships_data:
+                            rel_ids_to_read.add(node_data['first_rel_id'])
 
-                    if node_data['first_rel_id'] != INVALID_ID and node_data['first_rel_id'] not in relationships_data:
-                        rel_ids_to_read.add(node_data['first_rel_id'])
+                        label = self.graph.get_label(node_data['label_id'])
+                        if label is None:
+                            label = self._collect_label(node_data['label_id'])
 
-                    label = self.graph.get_label(node_data['label_id'])
-                    if label is None:
-                        label = self._collect_label(node_data['label_id'])
+                        properties = self._collect_properties(node_data['first_prop_id'])
 
-                    properties = self._collect_properties(node_data['first_prop_id'])
+                        node = Node(id=node_id, label=label, properties=properties)
 
-                    node = Node(id=node_id, label=label, properties=properties)
-
-                    self.graph.add_node(node)
+                        self.graph.add_node(node)
 
             node_ids_to_read = set()
 
             new_rel_ids = set()
             for rel_id in rel_ids_to_read:
                 if rel_id != INVALID_ID and rel_id not in relationships_data:
-                    rel_data = self.io_engine.select_relationship(rel_id)
+                    rel_data: Dict[str, Union[DB_TYPE, Label, List[Property]]] \
+                        = self.io_engine.select_relationship(rel_id)
+                    if rel_data:
+                        start_node = self.graph.get_node(rel_data['start_node'])
+                        if start_node is None:
+                            node_ids_to_read.add(rel_data['start_node'])
 
-                    start_node = self.graph.get_node(rel_data['start_node'])
-                    if start_node is None:
-                        node_ids_to_read.add(rel_data['start_node'])
+                        end_node = self.graph.get_node(rel_data['end_node'])
+                        if end_node is None:
+                            node_ids_to_read.add(rel_data['end_node'])
 
-                    end_node = self.graph.get_node(rel_data['end_node'])
-                    if end_node is None:
-                        node_ids_to_read.add(rel_data['end_node'])
+                        label = self.graph.get_label(rel_data['label_id'])
+                        if label is None:
+                            label = self._collect_label(rel_data['label_id'])
 
-                    label = self.graph.get_label(rel_data['label_id'])
-                    if label is None:
-                        label = self._collect_label(rel_data['label_id'])
+                        rel_data['label'] = label
 
-                    rel_data['label'] = label
+                        if rel_data['start_prev_id'] != INVALID_ID and rel_data['start_prev_id'] not in relationships_data:
+                            new_rel_ids.add(rel_data['start_prev_id'])
 
-                    if rel_data['start_prev_id'] != INVALID_ID and rel_data['start_prev_id'] not in relationships_data:
-                        new_rel_ids.add(rel_data['start_prev_id'])
+                        if rel_data['start_next_id'] != INVALID_ID and rel_data['start_next_id'] not in relationships_data:
+                            new_rel_ids.add(rel_data['start_next_id'])
 
-                    if rel_data['start_next_id'] != INVALID_ID and rel_data['start_next_id'] not in relationships_data:
-                        new_rel_ids.add(rel_data['start_next_id'])
+                        if rel_data['end_prev_id'] != INVALID_ID and rel_data['end_prev_id'] not in relationships_data:
+                            new_rel_ids.add(rel_data['end_prev_id'])
 
-                    if rel_data['end_prev_id'] != INVALID_ID and rel_data['end_prev_id'] not in relationships_data:
-                        new_rel_ids.add(rel_data['end_prev_id'])
+                        if rel_data['end_next_id'] != INVALID_ID and rel_data['end_next_id'] not in relationships_data:
+                            new_rel_ids.add(rel_data['end_next_id'])
 
-                    if rel_data['end_next_id'] != INVALID_ID and rel_data['end_next_id'] not in relationships_data:
-                        new_rel_ids.add(rel_data['end_next_id'])
-
-                    rel_data['properties'] = self._collect_properties(rel_data['first_prop_id'])
-                    relationships_data[rel_id] = rel_data
+                        rel_data['properties'] = self._collect_properties(rel_data['first_prop_id'])
+                        relationships_data[rel_id] = rel_data
             rel_ids_to_read = new_rel_ids
 
         for rel_id in relationships_data:
@@ -357,12 +429,16 @@ class GraphEngine(Engine):
 
                 self.graph.add_relationship(rel)
 
-    def _collect_label(self, label_id) -> Label:
+    def _collect_label(self, label_id) -> Optional[Label]:
         label_data = self.io_engine.select_label(label_id)
-        label = Label(id=label_data['id'], name=label_data['name'], used=label_data['used'])
+        if label_data:
+            label = Label(id=label_data['id'], name=label_data['name'], used=label_data['used'])
 
-        self.label_names[label.get_name()] = label.get_id()
-        self.graph.add_label(label)
+            self.label_names[label.get_name()] = label.get_id()
+            self.graph.add_label(label)
+        else:
+            # raise GraphEngineError(f'LabelNotFoundError: Label #{label_id} was not found')
+            return None
 
         return label
 
@@ -373,6 +449,8 @@ class GraphEngine(Engine):
             return properties
 
         property_data = self.io_engine.select_property(first_prop_id)
+        if not property_data:
+            return properties
         prop = Property(used=property_data['used'],
                         id=property_data['id'],
                         key=property_data['key'],
@@ -381,6 +459,9 @@ class GraphEngine(Engine):
 
         while property_data['next_prop_id'] != INVALID_ID:
             property_data = self.io_engine.select_property(property_data['next_prop_id'])
+            if not property_data:
+                return properties
+
             next_property = Property(used=property_data['used'],
                                      id=property_data['id'],
                                      key=property_data['key'],

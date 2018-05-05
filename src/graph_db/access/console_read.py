@@ -1,6 +1,9 @@
-from graph_db.engine.graph import Graph
-from graph_db.access.parser import Parser
+from graph_db.access.execute import QueryExecutor
+from graph_db.access.parser import Parser, InputError
 import os
+import sys
+
+from graph_db.engine.graph_engine import GraphEngine
 
 greeting = "Query examples:\n" \
            "create graph: label\n" \
@@ -25,19 +28,19 @@ greeting = "Query examples:\n" \
 
 class ConsoleReader:
 
-    def __init__(self):
-        self.temp_dir = 'temp_db/'
-        self.graph = None
+    def __init__(self, base_dir: str = 'temp_db/'):
+        self.base_dir = base_dir
+        self.graph_engine = GraphEngine(self.base_dir)
         self.parser = Parser()
-        self.is_created = False
+        self.query_executor = QueryExecutor()
 
     def __del__(self):
         try:
-            self.graph.close_engine()
-            for path in os.listdir(self.temp_dir):
-                os.remove(os.path.join(self.temp_dir, path))
-            os.removedirs(self.temp_dir)
-        except:
+            self.graph_engine.close()
+            for path in os.listdir(self.base_dir):
+                os.remove(os.path.join(self.base_dir, path))
+            os.removedirs(self.base_dir)
+        except FileNotFoundError:
             print("You didn't enter any query.")
 
     def read_query(self):
@@ -51,20 +54,37 @@ class ConsoleReader:
                     continue
                 if user_input == 'exit':
                     break
-                if 'create graph' not in user_input and self.is_created is False:
+                if 'create graph' not in user_input and self.graph_engine.get_graph() is None:
                     print('You have to create a graph firstly using \'create graph: label\'')
                     continue
                 else:
-                    if self.is_created is False:
-                        self.graph = self.parser.parse_query(None, user_input)
-                        if self.graph is not None:
-                            self.is_created = True
+                    if not self.graph_engine.get_graph():
+                        try:
+                            func, params = self.parser.parse_query(user_input)
+                            self.query_executor.execute(self.graph_engine, func, **params)
+                        except InputError as e:
+                            print(e)
                     else:
                         if 'create graph' in user_input:
-                            print("You have already created a graph called '" + self.graph.name + "'")
+                            print(f"You have already created a graph called "
+                                  f"'{self.graph_engine.get_graph().get_name()}'")
                             continue
-                        self.parser.parse_query(self.graph, user_input)
+                        try:
+                            func, params = self.parser.parse_query(user_input)
+                            result = self.query_executor.execute(self.graph_engine, func, **params)
+                            if isinstance(result, list):
+                                print('\n'.join(map(str, result)))
+                            else:
+                                print(result)
+                        except InputError as e:
+                            print(e)
 
 
-reader = ConsoleReader()
-reader.read_query()
+if __name__ == '__main__':
+    base_dir = 'temp_db/'
+    if len(sys.argv) > 1:
+        base_dir = sys.argv[1]
+    print(base_dir)
+
+    reader = ConsoleReader()
+    reader.read_query()
