@@ -61,7 +61,7 @@ class IOEngine:
             port = DEFAULT_WORKER_PORTS[0]
             while port in ports_in_use:
                 port = port + 1
-        self.worker_pool[port] = Process(target=startWorkerService, args=(port, len(self.worker_pool, )))
+        self.worker_pool[port] = Process(target=startWorkerService, args=(port, len(self.worker_pool), ))
         self.worker_pool[port].start()
         time.sleep(0.3)
         self.manager.add_worker('localhost', port)

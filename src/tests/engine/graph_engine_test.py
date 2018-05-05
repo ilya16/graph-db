@@ -1,6 +1,6 @@
 from unittest import TestCase
 import os
-
+import time
 from graph_db.engine.graph_engine import GraphEngine
 from graph_db.engine.property import Property
 from graph_db.fs.io_engine import DYNAMIC_RECORD_PAYLOAD_SIZE
@@ -33,6 +33,7 @@ class IOEngineCase(TestCase):
             os.listdir(self.temp_dir)
 
     def test_nodes_and_labels(self):
+        cur = time.time()
         label_name = 'test'
 
         node = self.graph_engine.create_node(label_name)
@@ -81,6 +82,7 @@ class IOEngineCase(TestCase):
         self.assertEqual(n_dynamic_records_old + n_dynamic_records,
                          self.graph_engine.get_stats()['DynamicStorage'],
                          'Dynamic Storage is not consistent')
+        print(time.time()-cur)
 
     def test_relationships(self):
         label_one = 'Robin'
