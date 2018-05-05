@@ -2,7 +2,8 @@ from unittest import TestCase
 import os
 
 from graph_db.access.execute import QueryExecutor
-from graph_db.access.parser import Parser
+from graph_db.access.parser import Parser, InputError
+from graph_db.engine.error import GraphEngineError
 from graph_db.engine.graph_engine import GraphEngine
 
 
@@ -30,7 +31,35 @@ class ParserCase(TestCase):
         'match node: age>19',
         'match node: sex=male',
         'match node: age<100',
-        'match relationship: since=2015'
+        'match relationship: since=2015',
+        'match node: Cats',
+        'match relationship: False',
+    ]
+
+    queries_invalid = [
+        'create graph:test_graph',
+        'create graph test_graph',
+        'create graph',
+        'create node:Cat',
+        'create node: ',
+        'create',
+        'match node: ',
+        'match node',
+        'create relationship: catches',
+        'create relationship: catches from Cat',
+        'create relationship: catches from id:3 to id:4',
+        'create node: Jerry Animal:',
+        'create node: Tom Animal',
+        'create node: Tom :Cat',
+        'create relationship: catches from Jerry to Tom :2',
+        'create node: system Type:PC CPU:Intel GPU:',
+        'create node: system Type:PC CPU:Intel :',
+        'create node: system Type:PC CPU:Intel:NVidia',
+        'match graph: ',
+        'match node: age>',
+        'match node: =',
+        'match node: <100',
+        'match relationship: since= =2015',
     ]
 
     def setUp(self):
@@ -216,3 +245,96 @@ class ParserCase(TestCase):
         result = self.query_executor.execute(self.graph_engine, func, **params)
         self.assertIsInstance(result, list)
         self.assertEqual(1, len(result), 'Incorrect number of matched relationships')
+
+        # Unexisting objects
+        func, params = self.parser.parse_query(self.queries[22])
+        result = self.query_executor.execute(self.graph_engine, func, **params)
+        self.assertIsInstance(result, list)
+        self.assertEqual(0, len(result), 'Incorrect number of matched nodes')
+
+        func, params = self.parser.parse_query(self.queries[23])
+        result = self.query_executor.execute(self.graph_engine, func, **params)
+        self.assertIsInstance(result, list)
+        self.assertEqual(0, len(result), 'Incorrect number of matched nodes')
+
+    def test_queries_invalid(self):
+        # Graph creation
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[0])
+
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[1])
+
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[2])
+
+        func, params = self.parser.parse_query(self.queries[0])
+        self.query_executor.execute(self.graph_engine, func, **params)
+
+        # Node creation
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[3])
+
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[4])
+
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[5])
+
+        # Node match
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[6])
+
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[7])
+
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[8])
+
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[9])
+
+        with self.assertRaises(GraphEngineError):
+            func, params = self.parser.parse_query(self.queries_invalid[10])
+            self.query_executor.execute(self.graph_engine, func, **params)
+
+        # Create nodes with property
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[11])
+
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[12])
+
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[13])
+
+        # Create relationships with property
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[14])
+
+        # Create a node with multiple properties
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[15])
+
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[16])
+
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[17])
+
+        # Graph traverse with match graph: graph
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[18])
+
+        # Match nodes by property
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[19])
+
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[20])
+
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[21])
+
+        with self.assertRaises(InputError):
+            self.parser.parse_query(self.queries_invalid[22])

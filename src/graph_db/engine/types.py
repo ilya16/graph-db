@@ -23,7 +23,7 @@ __all__ = [
     'DYNAMIC_RECORD_PAYLOAD_SIZE'
 ]
 
-DB_TYPE = Union[str, int, float, bool, None]
+DB_TYPE = Union[str, int, float, bool]
 
 BYTEORDER = 'big'
 SIGNED = True

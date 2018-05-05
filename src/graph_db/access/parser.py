@@ -28,25 +28,16 @@ class Parser:
                     node_label = query.split()[2]
                 except Exception:
                     raise InputError('Incorrect query')
-                if query_len > 3:
-                    if query_len >= 4:
-                        try:
-                            key, value = query.split()[3].split(':')
-                            properties.append(Property(key, value))
-                        except Exception:
+                prop_idx = 3
+                while query_len > prop_idx:
+                    try:
+                        key, value = query.split()[prop_idx].split(':')
+                        if key == '' or value == '':
                             raise InputError('Write properties as follows: key:value')
-                    if query_len >= 5:
-                        try:
-                            key, value = query.split()[4].split(':')
-                            properties.append(Property(key, value))
-                        except Exception:
-                            raise InputError('Write properties as follows: key:value')
-                    if query_len >= 6:
-                        try:
-                            key, value = query.split()[5].split(':')
-                            properties.append(Property(key, value))
-                        except Exception:
-                            raise InputError('Write properties as follows: key:value')
+                        properties.append(Property(key, value))
+                    except Exception:
+                        raise InputError('Write properties as follows: key:value')
+                    prop_idx += 1
                 return GraphEngine.create_node, {'label_name': node_label, 'properties': properties}
 
             if creation_of == 'relationship:':
@@ -63,25 +54,16 @@ class Parser:
                 except Exception:
                     raise InputError('Incorrect query')
                 try:
-                    if query_len > 7:
-                        if query_len >= 8:
-                            try:
-                                key, value = query.split()[7].split(':')
-                                properties.append(Property(key, value))
-                            except Exception:
+                    prop_idx = 7
+                    while query_len > prop_idx:
+                        try:
+                            key, value = query.split()[prop_idx].split(':')
+                            if key == '' or value == '':
                                 raise InputError('Write properties as follows: key:value')
-                        if query_len >= 9:
-                            try:
-                                key, value = query.split()[8].split(':')
-                                properties.append(Property(key, value))
-                            except Exception:
-                                raise InputError('Write properties as follows: key:value')
-                        if query_len >= 10:
-                            try:
-                                key, value = query.split()[9].split(':')
-                                properties.append(Property(key, value))
-                            except Exception:
-                                raise InputError('Write properties as follows: key:value')
+                            properties.append(Property(key, value))
+                        except Exception:
+                            raise InputError('Write properties as follows: key:value')
+                        prop_idx += 1
 
                     if start_node_id == -1:
                         select_start_node_call = GraphEngine.select_nodes, {'label': start_node_label}
@@ -123,6 +105,8 @@ class Parser:
                     else:
                         if sign[0] in symbols:
                             key, value = third_term.split(sign[0])
+                            if key == '' or value == '':
+                                raise InputError('Write properties as follows: key:value')
                             if match_of != 'node:' and match_of != 'relationship:':
                                 raise InputError('Incorrect query')
                             return GraphEngine.select_with_condition, {'key': key,
@@ -132,11 +116,11 @@ class Parser:
                         else:
                             raise InputError('Incorrect query')
                 if match_of == 'graph:':
-                    # if third_term == graph.name:
-                    #     print("\nGraph: '" + str(graph.name) + "'")
-                    return GraphEngine.traverse_graph, {}
-                    # else:
+                    # if third_term != graph.name:
                     #     raise InputError("There is no such " + '"' + str(third_term) + '"' + " graph")
+                    return GraphEngine.traverse_graph, {}
+
+                raise InputError('Incorrect query')
             except Exception:
                 raise InputError('Either you haven\'t created entered label or entered label is incorrect')
         elif query_type.lower() == 'delete':
