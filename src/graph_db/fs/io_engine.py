@@ -5,12 +5,21 @@ from graph_db.engine.node import Node
 from graph_db.engine.property import Property
 from graph_db.engine.relationship import Relationship
 from graph_db.engine.types import *
+#from .manager import DBFSManager
 from graph_db.fs.error import RecordNotFoundError
-from .manager import DBFSManager
 from .decoder import RecordDecoder
 from .encoder import RecordEncoder
-from .worker import Worker
+#from .worker import Worker
+import logging
+import os
 
+from multiprocessing import Process
+import rpyc
+from .conf import DEFAULT_MANAGER_PORTS, DEFAULT_WORKER_PORTS
+from .manager import startManagerService
+from .worker import startWorkerService
+import time
+import sys
 
 # TODO: distribution of data across different workers based on ids
 # TODO: connections with remote machines
@@ -22,10 +31,72 @@ class IOEngine:
     Processes graph database queries on IO level.
     """
     def __init__(self, base_path: str = MEMORY):
-        self.dbfs_manager = DBFSManager(base_path)
 
-    def add_worker(self, worker: Worker):
-        self.dbfs_manager.add_worker(worker)
+        self.worker_pool = {}
+        self.manager_pool = {}
+
+        self.manager_pool[2131] = Process(target=startManagerService, args=([], 2131))
+        self.manager_pool[2131].start()
+        time.sleep(0.3)
+        print('Manager node created at localhost: {}'.format(2131))
+
+        self.con = rpyc.connect('localhost', 2131, config={'sync_request_timeout':60})
+        self.manager = self.con.root.Manager()
+
+        if not self.manager:
+            print('[Client] was not able to obtain connection to the cluster.')
+        self.conf_setup()
+        self.con.root.Manager().update_stats()
+        #self.dbfs_manager = DBFSManager(base_path)
+
+    # Incorporated DFS features
+
+    def create_worker_node(self, port = None):
+        if port in self.worker_pool:
+            return
+        if not self.manager_pool:
+            return
+        if not port:
+            ports_in_use = self.worker_pool.keys()
+            port = DEFAULT_WORKER_PORTS[0]
+            while port in ports_in_use:
+                port = port + 1
+        self.worker_pool[port] = Process(target=startWorkerService, args=(port, ))
+        self.worker_pool[port].start()
+        time.sleep(0.3)
+        self.manager.add_worker('localhost', port)
+        print('Worker node created at localhost: {}'.format(port))
+
+    def create_manager_node(self, port=None):
+        if port in self.manager_pool:
+            return
+        if not port:
+            ports_in_use = self.manager_pool.keys()
+            port = DEFAULT_MANAGER_PORTS[0]
+            while port in ports_in_use:
+                port = port + 1
+
+    def get_all_processes(self):
+        for p in self.worker_pool.keys():
+            yield self.worker_pool[p]
+        for p in self.manager_pool.keys():
+            yield self.manager_pool[p]
+
+    def conf_setup(self):
+        #for port in DEFAULT_MANAGER_PORTS:
+        #    self.create_manager_node(port)
+        for port in DEFAULT_WORKER_PORTS:
+            self.create_worker_node(port)
+
+
+    def print_processes(self, arg):
+        print('Manager: ')
+        print(self.manager_pool)
+        print('\nWorkers: ')
+        print(self.worker_pool)
+
+    # def add_worker(self, worker: Worker):
+    #     self.dbfs_manager.add_worker(worker)
 
     def close(self):
         self.dbfs_manager.close()
@@ -35,7 +106,7 @@ class IOEngine:
         Returns total number of records in each type of storage.
         :return:        dictionary with stats
         """
-        return self.dbfs_manager.get_stats()
+        return self.con.root.Manager().get_stats()
 
     # Node
 
@@ -62,7 +133,8 @@ class IOEngine:
             node.set_id(self.get_stats()['NodeStorage'])
 
         node_record = RecordEncoder.encode_node(node)
-        self.dbfs_manager.write_record(node_record, 'NodeStorage', update=update)
+        print(node_record)
+        self.con.root.Manager().write_record(node_record, 'NodeStorage', update=update)
 
         return node
 
@@ -73,7 +145,7 @@ class IOEngine:
         :return:
         """
         try:
-            node_record = self.dbfs_manager.read_record(node_id, 'NodeStorage')
+            node_record = self.manager.read_record(node_id, 'NodeStorage')
             return RecordDecoder.decode_node_record(node_record)
         except RecordNotFoundError as e:
             print(e)
@@ -104,7 +176,7 @@ class IOEngine:
             rel.set_id(self.get_stats()['RelationshipStorage'])
 
         relationship_record = RecordEncoder.encode_relationship(rel)
-        self.dbfs_manager.write_record(relationship_record, 'RelationshipStorage', update=update)
+        self.manager.write_record(relationship_record, 'RelationshipStorage', update=update)
 
         return rel
 
@@ -115,7 +187,7 @@ class IOEngine:
         :return:
         """
         try:
-            relationship_record = self.dbfs_manager.read_record(rel_id, 'RelationshipStorage')
+            relationship_record = self.manager.read_record(rel_id, 'RelationshipStorage')
             return RecordDecoder.decode_relationship_record(relationship_record)
         except RecordNotFoundError as e:
             print(e)
@@ -149,7 +221,7 @@ class IOEngine:
         self._write_dynamic_data(label.get_name(), dynamic_id)
 
         label_record = RecordEncoder.encode_label(label, dynamic_id)
-        self.dbfs_manager.write_record(label_record, 'LabelStorage', update=update)
+        self.manager.write_record(label_record, 'LabelStorage', update=update)
 
         return label
 
@@ -161,7 +233,7 @@ class IOEngine:
         :return:
         """
         try:
-            label_record = self.dbfs_manager.read_record(label_id, 'LabelStorage')
+            label_record = self.manager.read_record(label_id, 'LabelStorage')
         except RecordNotFoundError as e:
             print(e)
             return dict()
@@ -201,7 +273,7 @@ class IOEngine:
             prop.set_id(self.get_stats()['PropertyStorage'])
 
         if update:
-            old_property_record = self.dbfs_manager.read_record(prop.get_id(), 'PropertyStorage')
+            old_property_record = self.manager.read_record(prop.get_id(), 'PropertyStorage')
             old_property_data = RecordDecoder.decode_property_record(old_property_record)
 
             key_dynamic_id = old_property_data['key_id']
@@ -231,7 +303,7 @@ class IOEngine:
                                                         key_id=key_dynamic_id,
                                                         value_id=value_dynamic_id,
                                                         next_prop_id=next_prop_id)
-        self.dbfs_manager.write_record(property_record, 'PropertyStorage', update=update)
+        self.manager.write_record(property_record, 'PropertyStorage', update=update)
 
         return prop
 
@@ -243,7 +315,7 @@ class IOEngine:
         :return:
         """
         try:
-            property_record = self.dbfs_manager.read_record(prop_id, 'PropertyStorage')
+            property_record = self.manager.read_record(prop_id, 'PropertyStorage')
         except RecordNotFoundError as e:
             print(e)
             return dict()
@@ -259,17 +331,18 @@ class IOEngine:
     def _write_dynamic_data(self, data, dynamic_id):
         dynamic_records = RecordEncoder.encode_dynamic_data(data, dynamic_id)
         for record in dynamic_records:
-            self.dbfs_manager.write_record(record, 'DynamicStorage')
+            self.manager.write_record(record, 'DynamicStorage')
 
     def _build_dynamic_data(self, dynamic_id) -> Optional[DB_TYPE]:
         data = ''
         while True:
             # read from dynamic storage until all data is collected
             try:
-                dynamic_record = self.dbfs_manager.read_record(dynamic_id, 'DynamicStorage')
+                dynamic_record = self.manager.read_record(dynamic_id, 'DynamicStorage')
             except RecordNotFoundError as e:
                 print(e)
                 return None
+            
             dynamic_data = RecordDecoder.decode_dynamic_data_record(dynamic_record)
 
             data += dynamic_data['data']
@@ -289,3 +362,8 @@ class IOEngine:
                 pass
 
         return data
+
+    def shut_down(self):
+        for p in self.get_all_processes():
+            p.terminate()
+            print(p, 'terminated')
