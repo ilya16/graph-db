@@ -22,22 +22,25 @@ class WorkerService(rpyc.Service):
 
         stats = dict()
 
+        def __init__(self):
+            self.update_stats()
+
         def update_stats(self) -> Dict[str, int]:
             """
             Updates total number of records in each connected storage.
             :return:        dictionary with stats
             """
-            self.stats = dict()
+            self.__class__.stats = dict()
             for storage_type in self.stores:
-                self.stats[storage_type] = self.stores[storage_type].count_records()
-            return self.stats
+                self.__class__.stats[storage_type] = self.__class__.stores[storage_type].count_records()
+            return self.__class__.stats
 
         def exposed_get_stats(self) -> Dict[str, int]:
             """
             Returns total number of records in each connected storage.
             :return:        dictionary with stats
             """
-            return self.stats
+            return self.__class__.stats
 
         def exposed_write_record(self, record: Record, storage_type: str, update: bool = False):
             """

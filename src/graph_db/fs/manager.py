@@ -53,7 +53,6 @@ class ManagerService(rpyc.Service):
                 worker_id = max(self.__class__.workers) + 1
             self.__class__.workers[worker_id] = (host, port)
 
-
             # self.workers.append(worker)
             # for storage_type in worker.stores:
             #     if storage_type in self.stores:
@@ -63,27 +62,29 @@ class ManagerService(rpyc.Service):
             #
             # self.update_stats()
 
-        def update_stats(self) -> Dict[str, int]:
+        def exposed_update_stats(self) -> Dict[str, int]:
             """
             Collects a sum of total number of records in each connected storage.
             :return:        dictionary with stats
             """
-            self.stats = dict()
-            for worker in self.workers:
-                worker_stats = worker.get_stats()
+            self.__class__.stats = dict()
+            for worker in self.__class__.workers.values():
+                host, port = worker
+                conn = rpyc.connect(host, port)
+                worker_stats = conn.root.Worker().get_stats()
                 for storage_type in worker_stats:
-                    if storage_type not in self.stats:
-                        self.stats[storage_type] = 0
-                    self.stats[storage_type] += worker_stats[storage_type]
+                    if storage_type not in self.__class__.stats:
+                        self.__class__.stats[storage_type] = 0
+                    self.__class__.stats[storage_type] += worker_stats[storage_type]
 
-            return self.stats
+            return self.__class__.stats
 
         def exposed_get_stats(self) -> Dict[str, int]:
             """
             Returns total number of records in each connected storage.
             :return:        dictionary with stats
             """
-            return self.stats
+            return self.__class__.stats
 
         def exposed_write_record(self, record: Record, storage_type: str, update: bool = False):
             """

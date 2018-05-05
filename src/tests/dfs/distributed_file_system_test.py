@@ -14,13 +14,17 @@ class ParserCase(TestCase):
         self.io_engine.stut_down()
 
         # deleting created temp stores
-        for path in os.listdir(self.temp_dir):
-            os.remove(os.path.join(self.temp_dir, path))
-        os.removedirs(self.temp_dir)
-
-        with self.assertRaises(FileNotFoundError):
-            os.listdir(self.temp_dir)
+        # for path in os.listdir(self.temp_dir):
+        #     os.remove(os.path.join(self.temp_dir, path))
+        # os.removedirs(self.temp_dir)
+        #
+        # with self.assertRaises(FileNotFoundError):
+        #     os.listdir(self.temp_dir)
 
     def test_queries(self):
 
+        stats = self.io_engine.get_stats()
+        print(stats)
+        self.assertEqual(0, stats['NodeStorage'])
         print("hello")
+
