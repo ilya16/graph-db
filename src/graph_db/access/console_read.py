@@ -40,7 +40,7 @@ class ConsoleReader:
             for path in os.listdir(self.base_dir):
                 os.remove(os.path.join(self.base_dir, path))
             os.removedirs(self.base_dir)
-        except:
+        except FileNotFoundError:
             print("You didn't enter any query.")
 
     def read_query(self):
@@ -73,7 +73,7 @@ class ConsoleReader:
                             func, params = self.parser.parse_query(user_input)
                             result = self.query_executor.execute(self.graph_engine, func, **params)
                             if isinstance(result, list):
-                                print('\n'.join(result))
+                                print('\n'.join(map(str, result)))
                             else:
                                 print(result)
                         except InputError as e:
@@ -82,8 +82,9 @@ class ConsoleReader:
 
 if __name__ == '__main__':
     base_dir = 'temp_db/'
-    if sys.argv:
-        base_dir = sys.argv[0]
+    if len(sys.argv) > 1:
+        base_dir = sys.argv[1]
+    print(base_dir)
 
     reader = ConsoleReader()
     reader.read_query()
