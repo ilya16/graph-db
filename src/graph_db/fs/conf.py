@@ -26,4 +26,7 @@ base_config = {
     'DynamicStorage': True
 }
 
-base_path = '/tmp/worker/db'
+base_path = 'tmp/'
+
+worker_path = 'worker_instance_'
+

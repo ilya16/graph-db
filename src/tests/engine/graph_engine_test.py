@@ -7,7 +7,7 @@ from graph_db.fs.io_engine import DYNAMIC_RECORD_PAYLOAD_SIZE
 
 
 class IOEngineCase(TestCase):
-    temp_dir = 'temp_db/'
+    temp_dir = 'tmp/'
 
     def setUp(self):
         self.graph_engine = GraphEngine(base_dir=self.temp_dir)
@@ -24,8 +24,10 @@ class IOEngineCase(TestCase):
 
         # deleting created temp stores
         for path in os.listdir(self.temp_dir):
-            os.remove(os.path.join(self.temp_dir, path))
-        os.removedirs(self.temp_dir)
+            for inner_path in os.listdir(os.path.join(self.temp_dir, path)):
+                os.remove(os.path.join(os.path.join(self.temp_dir, path), inner_path))
+            os.removedirs(os.path.join(self.temp_dir, path))
+        #os.removedirs(self.temp_dir)
 
         with self.assertRaises(FileNotFoundError):
             os.listdir(self.temp_dir)

@@ -6,12 +6,12 @@ from .record import Record
 
 import rpyc
 from rpyc.utils.server import ThreadedServer
-from .conf import DEFAULT_MANAGER_PORTS, DEFAULT_WORKER_PORTS, LOG_DIR, base_config, base_path
+from .conf import DEFAULT_MANAGER_PORTS, DEFAULT_WORKER_PORTS, LOG_DIR, base_config, base_path, worker_path
 import logging
 import os
 
 
-class WorkerService(rpyc.Service):
+class WorkerService(rpyc.SlaveService):
     class exposed_Worker(object):
         """
         Worker Machine File System manager.
@@ -80,29 +80,24 @@ class WorkerService(rpyc.Service):
             for storage in self.stores:
                 self.stores[storage].close()
 
-
-def startWorkerService(server_port):
-    logging.basicConfig(filename=os.path.join(LOG_DIR, 'minion'),
-                        format='%(asctime)s--%(levelname)s:%(message)s',
-                        datefmt='%m/%d/%Y %I:%M:%S %p',
-                        level=logging.DEBUG)
+def startWorkerService(server_port, worker_id):
 
     worker = WorkerService.exposed_Worker
 
     if base_config['NodeStorage']:
-        worker.stores['NodeStorage'] = NodeStorage(path=base_path + NODE_STORAGE)
+        worker.stores['NodeStorage'] = NodeStorage(path=base_path + worker_path + str(worker_id) + '/' + NODE_STORAGE)
 
     if base_config['RelationshipStorage']:
-        worker.stores['RelationshipStorage'] = RelationshipStorage(path=base_path + RELATIONSHIP_STORAGE)
+        worker.stores['RelationshipStorage'] = RelationshipStorage(path=base_path + worker_path + str(worker_id) + '/'  + RELATIONSHIP_STORAGE)
 
     if base_config['LabelStorage']:
-        worker.stores['LabelStorage'] = LabelStorage(path=base_path + LABEL_STORAGE)
+        worker.stores['LabelStorage'] = LabelStorage(path=base_path + worker_path + str(worker_id) + '/' + LABEL_STORAGE)
 
     if base_config['PropertyStorage']:
-        worker.stores['PropertyStorage'] = PropertyStorage(path=base_path + PROPERTY_STORAGE)
+        worker.stores['PropertyStorage'] = PropertyStorage(path=base_path + worker_path + str(worker_id) + '/' + PROPERTY_STORAGE)
 
     if base_config['DynamicStorage']:
-        worker.stores['DynamicStorage'] = DynamicStorage(path=base_path + DYNAMIC_STORAGE)
+        worker.stores['DynamicStorage'] = DynamicStorage(path=base_path + worker_path + str(worker_id) + '/' + DYNAMIC_STORAGE)
 
     t = ThreadedServer(WorkerService, port=server_port)
     t.start()

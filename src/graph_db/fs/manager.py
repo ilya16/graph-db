@@ -19,7 +19,7 @@ import os
 # TODO: distribution of data across different workers based on ids
 # TODO: connections with remote machines
 
-class ManagerService(rpyc.Service):
+class ManagerService(rpyc.SlaveService):
     class exposed_Manager(object):
         """
         Graph Database File System manager.
@@ -55,7 +55,7 @@ class ManagerService(rpyc.Service):
             else:
                 worker_id = max(self.__class__.workers) + 1
             self.__class__.workers[worker_id] = (host, port)
-            self.__class__.workers_conn_pool[worker_id] = rpyc.connect(host, port)
+            self.__class__.workers_conn_pool[worker_id] = rpyc.classic.connect(host, port)
 
             # self.workers.append(worker)
             # for storage_type in worker.stores:
@@ -74,7 +74,7 @@ class ManagerService(rpyc.Service):
             self.__class__.stats = dict()
             for worker in self.__class__.workers.values():
                 host, port = worker
-                conn = rpyc.connect(host, port)
+                conn = rpyc.classic.connect(host, port)
                 worker_stats = conn.root.Worker().get_stats()
                 for storage_type in worker_stats:
                     if storage_type not in self.__class__.stats:
@@ -119,7 +119,8 @@ class ManagerService(rpyc.Service):
             :param storage_type     storage type
             :return:
             """
-            worker = self.workers[0]    # one local worker with storage
+            #worker = self.workers[0]    # one local worker with storage
+            worker = self.__class__.workers_conn_pool[0].root.Worker()
 
             try:
                 record = worker.read_record(record_id, storage_type)
@@ -136,16 +137,10 @@ class ManagerService(rpyc.Service):
 
 def startManagerService(worker_ports=DEFAULT_WORKER_PORTS,
                         manager_port=DEFAULT_MANAGER_PORTS[0]):
-    logging.basicConfig(filename=os.path.join(LOG_DIR, 'manager'),
-                        format='%(asctime)s--%(levelname)s:%(message)s',
-                        datefmt='%m/%d/%Y %I:%M:%S %p',
-                        level=logging.DEBUG)
+
     manager = ManagerService.exposed_Manager
     # manager.block_size = block_size
     # manager.replication_factor = replication_factor
-
-    logging.info('Current Config:')
-    logging.info('Minions: %s', str(manager.workers))
 
     t = ThreadedServer(ManagerService, port=manager_port)
     t.start()

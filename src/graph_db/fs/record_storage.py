@@ -57,7 +57,7 @@ class RecordStorage(metaclass=abc.ABCMeta):
         assert record.idx < self.records, f'Block {record.idx} does not exist'
 
         self.file.seek(record.idx * self.record_size)
-        self.file.write(record)
+        self.file.write(bytearray(record))
 
     def allocate_record(self) -> Record:
         """

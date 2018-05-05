@@ -9,13 +9,13 @@ from graph_db.engine.node import Node
 from graph_db.engine.property import Property
 from graph_db.engine.types import INVALID_ID, DB_TYPE
 from graph_db.fs.io_engine import IOEngine
-from graph_db.fs.worker import Worker
+#from graph_db.fs.worker import Worker
 
 
 class GraphEngine(Engine):
     def __init__(self, base_dir):
         self.io_engine = IOEngine()
-        self.io_engine.add_worker(Worker(base_path=base_dir))
+        #self.io_engine.add_worker(Worker(base_path=base_dir))
 
         # graph object
         self.graph = None

@@ -33,3 +33,8 @@ class ParserCase(TestCase):
 
         self.io_engine.insert_node(node)
         self.assertEqual(1, self.io_engine.get_stats()['NodeStorage'])
+
+        retrieved_node = self.io_engine.select_node(0)
+        print(retrieved_node)
+        #self.assertEqual('Bobbi', retrieved_node.get_label())
+        # self.assertEqual(1, 0, ":)")

@@ -40,7 +40,7 @@ class IOEngine:
         time.sleep(0.3)
         print('Manager node created at localhost: {}'.format(2131))
 
-        self.con = rpyc.connect('localhost', 2131, config={'sync_request_timeout':60})
+        self.con = rpyc.classic.connect('localhost', 2131)
         self.manager = self.con.root.Manager()
 
         if not self.manager:
@@ -61,7 +61,7 @@ class IOEngine:
             port = DEFAULT_WORKER_PORTS[0]
             while port in ports_in_use:
                 port = port + 1
-        self.worker_pool[port] = Process(target=startWorkerService, args=(port, ))
+        self.worker_pool[port] = Process(target=startWorkerService, args=(port, len(self.worker_pool, )))
         self.worker_pool[port].start()
         time.sleep(0.3)
         self.manager.add_worker('localhost', port)
@@ -95,12 +95,6 @@ class IOEngine:
         print('\nWorkers: ')
         print(self.worker_pool)
 
-    # def add_worker(self, worker: Worker):
-    #     self.dbfs_manager.add_worker(worker)
-
-    def close(self):
-        self.dbfs_manager.close()
-
     def get_stats(self) -> Dict[str, int]:
         """
         Returns total number of records in each type of storage.
@@ -133,8 +127,7 @@ class IOEngine:
             node.set_id(self.get_stats()['NodeStorage'])
 
         node_record = RecordEncoder.encode_node(node)
-        print(node_record)
-        self.con.root.Manager().write_record(node_record, 'NodeStorage', update=update)
+        self.manager.write_record(node_record, 'NodeStorage', update=update)
 
         return node
 
@@ -363,7 +356,7 @@ class IOEngine:
 
         return data
 
-    def shut_down(self):
+    def close(self):
         for p in self.get_all_processes():
             p.terminate()
             print(p, 'terminated')
