@@ -21,6 +21,9 @@ class Graph:
     def get_name(self) -> str:
         return self._name
 
+    def delete_node(self, node_id):
+        del self._nodes[node_id]
+
     def add_node(self, node: Node):
         self._nodes[node.get_id()] = node
 

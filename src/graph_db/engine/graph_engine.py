@@ -151,11 +151,13 @@ class GraphEngine(Engine):
 
     def select_node(self, node_id: int) -> Node:
         node = self.graph.get_node(node_id)
+
         if node is None:
             # node = self.io_engine.select_node(node_id)
             self._collect_objects(entry_obj_id=node_id, obj_type='Node')
             node = self.graph.get_node(node_id)
-
+            if not node.is_used():
+                raise GraphEngineError(f'NodeNotFoundError: Node #{node_id} was not found')
         if not node:
             raise GraphEngineError(f'NodeNotFoundError: Node #{node_id} was not found')
 
@@ -249,6 +251,7 @@ class GraphEngine(Engine):
         node = self.select_node(node_id)
         if node:
             node.set_used(False)
+            self.graph.delete_node(node_id)
             return self.io_engine.update_node(node)
         else:
             raise GraphEngineError(f'NodeNotFoundError: Node #{node_id} was not found')
