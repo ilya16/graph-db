@@ -1,6 +1,7 @@
 from graph_db.access import db
 from graph_db.access.parser import InputError
 import sys
+import readline
 
 HELP = "Query examples:\n" \
            "create graph: label\n" \
