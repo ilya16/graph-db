@@ -1,6 +1,8 @@
 from unittest import TestCase
 import os
 
+from graph_db.engine.api import EngineAPI
+from graph_db.engine.error import GraphEngineError
 from graph_db.engine.graph_engine import GraphEngine
 from graph_db.engine.property import Property
 from graph_db.fs.io_engine import DYNAMIC_RECORD_PAYLOAD_SIZE
@@ -10,13 +12,12 @@ class IOEngineCase(TestCase):
     temp_dir = 'temp_db/'
 
     def setUp(self):
-        self.graph_engine = GraphEngine(base_dir=self.temp_dir)
+        self.graph_engine: EngineAPI = GraphEngine(base_dir=self.temp_dir)
         self.graph_engine.create_graph('test')
 
         self.assertDictEqual(dict(), self.graph_engine.get_graph().get_nodes())
         self.assertDictEqual(dict(), self.graph_engine.get_graph().get_relationships())
         self.assertDictEqual(dict(), self.graph_engine.get_graph().get_labels())
-        self.assertDictEqual(dict(), self.graph_engine.label_names)
 
     def tearDown(self):
         self.graph_engine.close()
@@ -304,4 +305,224 @@ class IOEngineCase(TestCase):
         self.assertEqual(20, retrieved_relationship.get_end_node().get_properties()[1].get_value(),
                          'Incorrect end node property\'s value')
 
+    def test_deletions(self):
+        node_label_name = 'User'
+        first_node_props = [Property('Name', 'Robin'), Property('Age', 18), Property('Male', True)]
+        edge_label_name = 'connected with'
 
+        # defining nodes
+        node_one = self.graph_engine.create_node(label_name=node_label_name, properties=first_node_props)
+        node_two = self.graph_engine.create_node(label_name=node_label_name)
+        self.assertEqual(2, self.graph_engine.get_stats()['NodeStorage'], 'Storage has incorrect number of nodes')
+
+        # deleting first node and checking that select method raises an exception
+        self.graph_engine.delete_node(node_one.get_id())
+        with self.assertRaises(GraphEngineError):
+            self.graph_engine.select_node(node_one.get_id())
+
+        # creating some nodes and relationships
+        node_one = node_two
+        node_two = self.graph_engine.create_node(label_name=node_label_name, properties=first_node_props)
+        self.assertEqual(2, node_two.get_id(), 'Node id is incorrect')
+        node_three = self.graph_engine.create_node(label_name=node_label_name, properties=first_node_props[:2])
+        node_four = self.graph_engine.create_node(label_name=node_label_name)
+        nodes = [node_one, node_two, node_three, node_four]
+        self.assertListEqual(nodes, self.graph_engine.select_nodes(), 'List of nodes is incorrect')
+
+        relationship_one_two = self.graph_engine.create_relationship(edge_label_name, node_one, node_two)
+        relationship_one_three = self.graph_engine.create_relationship(edge_label_name, node_one, node_three)
+        relationship_three_one = self.graph_engine.create_relationship(edge_label_name, node_three, node_one)
+        relationship_two_four = self.graph_engine.create_relationship(edge_label_name, node_two, node_four)
+        relationship_three_two = self.graph_engine.create_relationship(edge_label_name, node_three, node_two)
+
+        self.assertEqual(3, len(self.graph_engine.select_node(node_one.get_id()).get_relationships()))
+        self.assertEqual(3, len(self.graph_engine.select_node(node_two.get_id()).get_relationships()))
+        self.assertEqual(3, len(self.graph_engine.select_node(node_three.get_id()).get_relationships()))
+        self.assertEqual(1, len(self.graph_engine.select_node(node_four.get_id()).get_relationships()))
+
+        # relationship_three_two
+        self.assertEqual(relationship_three_one, relationship_three_two.get_start_prev_rel())
+        self.assertIsNone(relationship_three_two.get_start_next_rel())
+        self.assertEqual(relationship_two_four, relationship_three_two.get_end_prev_rel())
+        self.assertIsNone(relationship_three_two.get_end_next_rel())
+
+        # relationship_two_four
+        self.assertEqual(relationship_one_two, relationship_two_four.get_start_prev_rel())
+        self.assertEqual(relationship_three_two, relationship_two_four.get_start_next_rel())
+        self.assertIsNone(relationship_two_four.get_end_prev_rel())
+        self.assertIsNone(relationship_two_four.get_end_next_rel())
+
+        # relationship_three_one
+        self.assertEqual(relationship_one_three, relationship_three_one.get_start_prev_rel())
+        self.assertEqual(relationship_three_two, relationship_three_one.get_start_next_rel())
+        self.assertEqual(relationship_one_three, relationship_three_one.get_end_prev_rel())
+        self.assertIsNone(relationship_three_one.get_end_next_rel())
+
+        # delete of relationship_three_two
+        self.graph_engine.delete_relationship(relationship_three_two.get_id())
+        self.assertListEqual([relationship_one_two, relationship_one_three,
+                              relationship_three_one, relationship_two_four],
+                             self.graph_engine.select_relationships(),
+                             'List of relationships is incorrect')
+        self.assertEqual(2, len(self.graph_engine.select_node(node_two.get_id()).get_relationships()))
+        self.assertEqual(2, len(self.graph_engine.select_node(node_three.get_id()).get_relationships()))
+
+        # relationship_three_two
+        self.assertIsNone(relationship_three_two.get_start_prev_rel())
+        self.assertIsNone(relationship_three_two.get_start_next_rel())
+        self.assertIsNone(relationship_three_two.get_end_prev_rel())
+        self.assertIsNone(relationship_three_two.get_end_next_rel())
+
+        # relationship_two_four
+        self.assertEqual(relationship_one_two, relationship_two_four.get_start_prev_rel())
+        self.assertIsNone(relationship_two_four.get_start_next_rel())
+        self.assertIsNone(relationship_two_four.get_end_prev_rel())
+        self.assertIsNone(relationship_two_four.get_end_next_rel())
+
+        # relationship_three_one
+        self.assertEqual(relationship_one_three, relationship_three_one.get_start_prev_rel())
+        self.assertIsNone(relationship_three_one.get_start_next_rel())
+        self.assertEqual(relationship_one_three, relationship_three_one.get_end_prev_rel())
+        self.assertIsNone(relationship_three_one.get_end_next_rel())
+
+        # delete of node_two
+        self.graph_engine.delete_node(node_two.get_id())
+
+        self.assertListEqual([node_one, node_three, node_four],
+                             self.graph_engine.select_nodes(),
+                             'List of nodes is incorrect')
+        self.assertListEqual([relationship_one_three, relationship_three_one],
+                             self.graph_engine.select_relationships(),
+                             'List of relationships is incorrect')
+        self.assertEqual(2, len(self.graph_engine.select_node(node_one.get_id()).get_relationships()))
+        self.assertEqual(2, len(self.graph_engine.select_node(node_three.get_id()).get_relationships()))
+        self.assertEqual(0, len(self.graph_engine.select_node(node_four.get_id()).get_relationships()))
+
+    def test_cache_clear(self):
+        node_label_name = 'User'
+        edge_label_name = 'connected with'
+
+        # defining nodes
+        node_one = self.graph_engine.create_node(label_name=node_label_name)
+        node_two = self.graph_engine.create_node(label_name=node_label_name)
+        node_three = self.graph_engine.create_node(label_name=node_label_name)
+        node_four = self.graph_engine.create_node(label_name=node_label_name)
+        nodes = [node_one, node_two, node_three, node_four]
+        self.assertListEqual(nodes, self.graph_engine.select_nodes(), 'List of nodes is incorrect')
+
+        relationship_one_two = self.graph_engine.create_relationship(edge_label_name, node_one, node_two)
+        relationship_one_three = self.graph_engine.create_relationship(edge_label_name, node_one, node_three)
+        relationship_three_one = self.graph_engine.create_relationship(edge_label_name, node_three, node_one)
+        relationship_two_four = self.graph_engine.create_relationship(edge_label_name, node_two, node_four)
+        relationship_three_two = self.graph_engine.create_relationship(edge_label_name, node_three, node_two)
+
+        self.assertEqual(3, len(self.graph_engine.select_node(node_one.get_id()).get_relationships()))
+        self.assertEqual(3, len(self.graph_engine.select_node(node_two.get_id()).get_relationships()))
+        self.assertEqual(3, len(self.graph_engine.select_node(node_three.get_id()).get_relationships()))
+        self.assertEqual(1, len(self.graph_engine.select_node(node_four.get_id()).get_relationships()))
+        self.assertEqual(2, len(self.graph_engine.select_labels()))
+        self.assertCountEqual([node_one.get_label(), relationship_three_one.get_label()],
+                              self.graph_engine.select_labels())
+
+        # relationship_three_two
+        self.assertEqual(relationship_three_one, relationship_three_two.get_start_prev_rel())
+        self.assertIsNone(relationship_three_two.get_start_next_rel())
+        self.assertEqual(relationship_two_four, relationship_three_two.get_end_prev_rel())
+        self.assertIsNone(relationship_three_two.get_end_next_rel())
+
+        # relationship_two_four
+        self.assertEqual(relationship_one_two, relationship_two_four.get_start_prev_rel())
+        self.assertEqual(relationship_three_two, relationship_two_four.get_start_next_rel())
+        self.assertIsNone(relationship_two_four.get_end_prev_rel())
+        self.assertIsNone(relationship_two_four.get_end_next_rel())
+
+        # relationship_three_one
+        self.assertEqual(relationship_one_three, relationship_three_one.get_start_prev_rel())
+        self.assertEqual(relationship_three_two, relationship_three_one.get_start_next_rel())
+        self.assertEqual(relationship_one_three, relationship_three_one.get_end_prev_rel())
+        self.assertIsNone(relationship_three_one.get_end_next_rel())
+
+        # clearing cache
+        self.graph_engine.clear()
+
+        self.assertEqual(4, self.graph_engine.get_stats()['NodeStorage'], 'Storage has incorrect number of nodes')
+        self.assertEqual(5, self.graph_engine.get_stats()['RelationshipStorage'],
+                         'Storage has incorrect number of relationships')
+
+        # retrieving the graph again (it is done through one `select` call)
+        node_one = self.graph_engine.select_node(0)
+
+        # selecting all nodes and relationships
+        node_two = self.graph_engine.select_node(1)
+        node_three = self.graph_engine.select_node(2)
+        node_four = self.graph_engine.select_node(3)
+        relationship_one_two = self.graph_engine.select_relationship(0)
+        relationship_one_three = self.graph_engine.select_relationship(1)
+        relationship_three_one = self.graph_engine.select_relationship(2)
+        relationship_two_four = self.graph_engine.select_relationship(3)
+        relationship_three_two = self.graph_engine.select_relationship(4)
+
+        self.assertEqual(3, len(self.graph_engine.select_node(node_one.get_id()).get_relationships()))
+        self.assertEqual(3, len(self.graph_engine.select_node(node_two.get_id()).get_relationships()))
+        self.assertEqual(3, len(self.graph_engine.select_node(node_three.get_id()).get_relationships()))
+        self.assertEqual(1, len(self.graph_engine.select_node(node_four.get_id()).get_relationships()))
+        self.assertCountEqual([node_one.get_label(), relationship_three_one.get_label()],
+                              self.graph_engine.select_labels())
+
+        # relationship_three_two
+        self.assertEqual(relationship_three_one, relationship_three_two.get_start_prev_rel())
+        self.assertIsNone(relationship_three_two.get_start_next_rel())
+        self.assertEqual(relationship_two_four, relationship_three_two.get_end_prev_rel())
+        self.assertIsNone(relationship_three_two.get_end_next_rel())
+
+        # relationship_two_four
+        self.assertEqual(relationship_one_two, relationship_two_four.get_start_prev_rel())
+        self.assertEqual(relationship_three_two, relationship_two_four.get_start_next_rel())
+        self.assertIsNone(relationship_two_four.get_end_prev_rel())
+        self.assertIsNone(relationship_two_four.get_end_next_rel())
+
+        # relationship_three_one
+        self.assertEqual(relationship_one_three, relationship_three_one.get_start_prev_rel())
+        self.assertEqual(relationship_three_two, relationship_three_one.get_start_next_rel())
+        self.assertEqual(relationship_one_three, relationship_three_one.get_end_prev_rel())
+        self.assertIsNone(relationship_three_one.get_end_next_rel())
+
+        # delete of relationship_three_two
+        self.graph_engine.delete_relationship(relationship_three_two.get_id())
+        self.assertCountEqual([relationship_one_two, relationship_one_three,
+                              relationship_three_one, relationship_two_four],
+                              self.graph_engine.select_relationships(),
+                              'List of relationships is incorrect')
+        self.assertEqual(2, len(self.graph_engine.select_node(node_two.get_id()).get_relationships()))
+        self.assertEqual(2, len(self.graph_engine.select_node(node_three.get_id()).get_relationships()))
+
+        # relationship_three_two
+        self.assertIsNone(relationship_three_two.get_start_prev_rel())
+        self.assertIsNone(relationship_three_two.get_start_next_rel())
+        self.assertIsNone(relationship_three_two.get_end_prev_rel())
+        self.assertIsNone(relationship_three_two.get_end_next_rel())
+
+        # relationship_two_four
+        self.assertEqual(relationship_one_two, relationship_two_four.get_start_prev_rel())
+        self.assertIsNone(relationship_two_four.get_start_next_rel())
+        self.assertIsNone(relationship_two_four.get_end_prev_rel())
+        self.assertIsNone(relationship_two_four.get_end_next_rel())
+
+        # relationship_three_one
+        self.assertEqual(relationship_one_three, relationship_three_one.get_start_prev_rel())
+        self.assertIsNone(relationship_three_one.get_start_next_rel())
+        self.assertEqual(relationship_one_three, relationship_three_one.get_end_prev_rel())
+        self.assertIsNone(relationship_three_one.get_end_next_rel())
+
+        # delete of node_two
+        self.graph_engine.delete_node(node_two.get_id())
+
+        self.assertListEqual([node_one, node_three, node_four],
+                             self.graph_engine.select_nodes(),
+                             'List of nodes is incorrect')
+        self.assertListEqual([relationship_one_three, relationship_three_one],
+                             self.graph_engine.select_relationships(),
+                             'List of relationships is incorrect')
+        self.assertEqual(2, len(self.graph_engine.select_node(node_one.get_id()).get_relationships()))
+        self.assertEqual(2, len(self.graph_engine.select_node(node_three.get_id()).get_relationships()))
+        self.assertEqual(0, len(self.graph_engine.select_node(node_four.get_id()).get_relationships()))

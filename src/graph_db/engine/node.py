@@ -55,6 +55,10 @@ class Node:
         assert self == rel.get_start_node() or self == rel.get_end_node()
         self._relationships.append(rel)
 
+    def remove_relationship(self, rel):
+        assert rel in self._relationships
+        self._relationships.remove(rel)
+
     def get_relationships(self):
         return self._relationships
 

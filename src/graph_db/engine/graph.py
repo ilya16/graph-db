@@ -24,6 +24,10 @@ class Graph:
     def add_node(self, node: Node):
         self._nodes[node.get_id()] = node
 
+    def remove_node(self, node_id):
+        if node_id in self._nodes:
+            del self._nodes[node_id]
+
     def get_node(self, node_id: int) -> Node:
         return self._nodes[node_id] if node_id in self._nodes else None
 
@@ -32,6 +36,10 @@ class Graph:
 
     def add_relationship(self, rel: Relationship):
         self._relationships[rel.get_id()] = rel
+
+    def remove_relationship(self, rel_id):
+        if rel_id in self._relationships:
+            del self._relationships[rel_id]
 
     def get_relationship(self, rel_id) -> Relationship:
         return self._relationships[rel_id] if rel_id in self._relationships else None
@@ -64,5 +72,4 @@ class Graph:
         self._nodes = dict()
         self._relationships = dict()
         self._labels = dict()
-        self._empty = True
         self._consistent = False
