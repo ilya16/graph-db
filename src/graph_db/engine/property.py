@@ -5,7 +5,7 @@ class Property:
     """ Property of node or relationship. """
 
     def __init__(self,
-                 key: DB_TYPE,
+                 key: str,
                  value: DB_TYPE,
                  id: int = INVALID_ID,
                  used: bool = True,

@@ -74,13 +74,6 @@ class Node:
     def is_used(self) -> bool:
         return self._used
 
-    def remove_dependencies(self):
-        for rel in self._relationships:
-            rel
-
-        start_node.remove_relationship(self)
-        end_node.remove_relationship(self)
-
     def __str__(self) -> str:
         properties_str = " ".join(map(str, self._properties)) if self._properties else None
         return f'Node #{self._id} = {{' \

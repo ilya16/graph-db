@@ -72,5 +72,4 @@ class Graph:
         self._nodes = dict()
         self._relationships = dict()
         self._labels = dict()
-        self._empty = True
         self._consistent = False
