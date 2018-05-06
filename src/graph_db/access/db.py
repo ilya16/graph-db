@@ -1,13 +1,12 @@
-import os
-
 from graph_db.access.cursor import Cursor
+from graph_db.engine.api import EngineAPI
 from graph_db.engine.graph_engine import GraphEngine
 
 
 class GraphDB:
     def __init__(self, base_dir: str):
         self.base_dir = base_dir
-        self.graph_engine = GraphEngine(base_dir)
+        self.graph_engine: EngineAPI = GraphEngine(base_dir)
 
     def cursor(self):
         return Cursor(self.graph_engine)

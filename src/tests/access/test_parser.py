@@ -2,7 +2,7 @@ from unittest import TestCase
 import os
 
 from graph_db.access import db
-from graph_db.access.parser import InputError
+from graph_db.engine.api import EngineAPI
 from graph_db.engine.error import GraphEngineError
 
 
@@ -72,7 +72,7 @@ class ParserCase(TestCase):
     def setUp(self):
         self.db = db.connect('temp_db/')
         self.cursor = self.db.cursor()
-        self.graph_engine = self.db.get_engine()
+        self.graph_engine: EngineAPI = self.db.get_engine()
 
     def tearDown(self):
         self.db.close()
@@ -177,14 +177,14 @@ class ParserCase(TestCase):
         self.assertEqual(1, retrieved_relationship.get_id(), 'relationship id is incorrect')
         prop = retrieved_relationship.get_first_property()
         self.assertEqual('Durability', prop.get_key(), 'Key of property is incorrect')
-        self.assertEqual('2', prop.get_value(), 'Value of property is incorrect')
+        self.assertEqual(2, prop.get_value(), 'Value of property is incorrect')
 
         self.cursor.execute(self.queries[11])
         retrieved_relationship = self.graph_engine.select_relationship(rel_id=2)
         self.assertEqual(2, retrieved_relationship.get_id(), 'relationship id is incorrect')
         prop = retrieved_relationship.get_first_property()
         self.assertEqual('Time', prop.get_key(), 'Key of property is incorrect')
-        self.assertEqual('10', prop.get_value(), 'Value of property is incorrect')
+        self.assertEqual(10, prop.get_value(), 'Value of property is incorrect')
 
         # Create a node with multiple properties
         self.cursor.execute(self.queries[12])
@@ -268,40 +268,40 @@ class ParserCase(TestCase):
     def test_queries_invalid(self):
         # Graph creation
         for query in self.queries_invalid[0:3]:
-            with self.assertRaises(InputError):
+            with self.assertRaises(SyntaxError):
                 self.cursor.execute(query)
 
         self.cursor.execute(self.queries[0])
 
         # Node creation
         for query in self.queries_invalid[3:6]:
-            with self.assertRaises(InputError):
+            with self.assertRaises(SyntaxError):
                 self.cursor.execute(query)
 
         # Node match
         for query in self.queries_invalid[6:11]:
-            with self.assertRaises(InputError):
+            with self.assertRaises(SyntaxError):
                 self.cursor.execute(query)
 
         # Create nodes with property
         for query in self.queries_invalid[11:14]:
-            with self.assertRaises(InputError):
+            with self.assertRaises(SyntaxError):
                 self.cursor.execute(query)
 
         # Create relationships with property
-        with self.assertRaises(InputError):
+        with self.assertRaises(SyntaxError):
             self.cursor.execute(self.queries_invalid[14])
 
         # Create a node with multiple properties
         for query in self.queries_invalid[15:18]:
-            with self.assertRaises(InputError):
+            with self.assertRaises(SyntaxError):
                 self.cursor.execute(query)
 
         # Graph traverse with match graph: graph
-        with self.assertRaises(InputError):
+        with self.assertRaises(SyntaxError):
             self.cursor.execute(self.queries_invalid[18])
 
         # Match nodes by property
         for query in self.queries_invalid[19:23]:
-            with self.assertRaises(InputError):
+            with self.assertRaises(SyntaxError):
                 self.cursor.execute(query)

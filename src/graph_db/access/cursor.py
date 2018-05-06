@@ -1,11 +1,11 @@
 from graph_db.access.execute import QueryExecutor
-from graph_db.access.parser import Parser, InputError
+from graph_db.access.parser import Parser
 from graph_db.access.result import ResultSet
-from graph_db.engine.graph_engine import GraphEngine
+from graph_db.engine.api import EngineAPI
 
 
 class Cursor:
-    def __init__(self, graph_engine: GraphEngine):
+    def __init__(self, graph_engine: EngineAPI):
         self.graph_engine = graph_engine
         self.parser = Parser()
         self.query_executor = QueryExecutor()
@@ -19,11 +19,14 @@ class Cursor:
                 self.result_set = ResultSet(result)
             else:
                 self.result_set = ResultSet([result])
-        except InputError as e:
+        except SyntaxError as e:
             raise e
 
     def fetch_all(self):
         return self.result_set
+
+    def fetch_one(self):
+        return self.result_set[0]
 
     def count(self):
         return len(self.result_set)
