@@ -17,4 +17,9 @@ setup(
     url='https://github.com/ilya16/graph-db',
     packages=find_packages('src', include=['graph_db', 'graph_db.*']),
     package_dir={'graph_db': 'src/graph_db'},
+    entry_points={
+        'console_scripts':
+            ['graphDB = graph_db.access.console:run']
+    },
+    test_suite='src.tests',
 )

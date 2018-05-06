@@ -63,11 +63,10 @@ class ConsoleReader:
                             print(e)
 
 
-if __name__ == '__main__':
+def run():
     base_dir = 'temp_db/'
     if len(sys.argv) > 1:
         base_dir = sys.argv[1]
     print(base_dir)
-
     reader = ConsoleReader()
     reader.read_query()
