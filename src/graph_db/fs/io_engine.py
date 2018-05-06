@@ -33,11 +33,9 @@ class IOEngine:
     def __init__(self, base_path: str = MEMORY):
 
         self.worker_pool = {}
-        self.manager_pool = {}
-
-        self.manager_pool[2131] = Process(target=startManagerService, args=([], 2131))
+        self.manager_pool = {2131: Process(target=startManagerService, args=([], 2131))}
         self.manager_pool[2131].start()
-        time.sleep(0.3)
+        time.sleep(0.1)
         print('Manager node created at localhost: {}'.format(2131))
 
         self.con = rpyc.classic.connect('localhost', 2131)
@@ -45,14 +43,16 @@ class IOEngine:
 
         if not self.manager:
             print('[Client] was not able to obtain connection to the cluster.')
-        self.conf_setup()
-        self.con.root.Manager().update_stats()
+
+        self.setup_workers()
+        self.manager.update_stats()
         #self.dbfs_manager = DBFSManager(base_path)
 
     # Incorporated DFS features
 
     def create_worker_node(self, port = None):
         if port in self.worker_pool:
+            print("gaga")
             return
         if not self.manager_pool:
             return
@@ -61,20 +61,11 @@ class IOEngine:
             port = DEFAULT_WORKER_PORTS[0]
             while port in ports_in_use:
                 port = port + 1
-        self.worker_pool[port] = Process(target=startWorkerService, args=(port, len(self.worker_pool), ))
+        self.worker_pool[port] = Process(target=startWorkerService, args=(port, len(self.worker_pool)))
         self.worker_pool[port].start()
-        time.sleep(0.3)
+        time.sleep(0.1)
         self.manager.add_worker('localhost', port)
         print('Worker node created at localhost: {}'.format(port))
-
-    def create_manager_node(self, port=None):
-        if port in self.manager_pool:
-            return
-        if not port:
-            ports_in_use = self.manager_pool.keys()
-            port = DEFAULT_MANAGER_PORTS[0]
-            while port in ports_in_use:
-                port = port + 1
 
     def get_all_processes(self):
         for p in self.worker_pool.keys():
@@ -82,9 +73,7 @@ class IOEngine:
         for p in self.manager_pool.keys():
             yield self.manager_pool[p]
 
-    def conf_setup(self):
-        #for port in DEFAULT_MANAGER_PORTS:
-        #    self.create_manager_node(port)
+    def setup_workers(self):
         for port in DEFAULT_WORKER_PORTS:
             self.create_worker_node(port)
 
@@ -95,12 +84,19 @@ class IOEngine:
         print('\nWorkers: ')
         print(self.worker_pool)
 
+
+    def close(self):
+        self.manager.flush_workers()
+        for p in self.get_all_processes():
+            p.terminate()
+            print(p, 'terminated')
+
     def get_stats(self) -> Dict[str, int]:
         """
         Returns total number of records in each type of storage.
         :return:        dictionary with stats
         """
-        return self.con.root.Manager().get_stats()
+        return self.manager.get_stats()
 
     # Node
 
@@ -355,8 +351,3 @@ class IOEngine:
                 pass
 
         return data
-
-    def close(self):
-        for p in self.get_all_processes():
-            p.terminate()
-            print(p, 'terminated')

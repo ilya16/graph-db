@@ -11,7 +11,7 @@ from time import sleep
 
 import rpyc
 from rpyc.utils.server import ThreadedServer
-from .conf import DEFAULT_MANAGER_PORTS, DEFAULT_WORKER_PORTS, base_path, LOG_DIR
+from .conf import DEFAULT_MANAGER_PORTS, DEFAULT_WORKER_PORTS, base_path
 import logging
 import os
 
@@ -50,45 +50,40 @@ class ManagerService(rpyc.SlaveService):
         stats = {}
 
         def exposed_add_worker(self, host, port):
-            if not self.__class__.workers:
+            if not self.workers:
                 worker_id = 0
             else:
-                worker_id = max(self.__class__.workers) + 1
-            self.__class__.workers[worker_id] = (host, port)
-            self.__class__.workers_conn_pool[worker_id] = rpyc.classic.connect(host, port)
+                worker_id = max(self.workers) + 1
+            self.workers[worker_id] = (host, port)
+            self.workers_conn_pool[worker_id] = rpyc.classic.connect(host, port)
 
-            # self.workers.append(worker)
-            # for storage_type in worker.stores:
-            #     if storage_type in self.stores:
-            #         self.stores[storage_type].append(worker.stores[storage_type])
-            #     else:
-            #         self.stores[storage_type] = [worker.stores[storage_type]]
-            #
-            # self.update_stats()
+        def exposed_flush_workers(self):
+            for worker in self.workers_conn_pool.values():
+                worker.root.Worker().flush()
 
         def exposed_update_stats(self) -> Dict[str, int]:
             """
             Collects a sum of total number of records in each connected storage.
             :return:        dictionary with stats
             """
-            self.__class__.stats = dict()
-            for worker in self.__class__.workers.values():
+            self.stats = dict()
+            for worker in self.workers.values():
                 host, port = worker
                 conn = rpyc.classic.connect(host, port)
                 worker_stats = conn.root.Worker().get_stats()
                 for storage_type in worker_stats:
-                    if storage_type not in self.__class__.stats:
-                        self.__class__.stats[storage_type] = 0
-                    self.__class__.stats[storage_type] += worker_stats[storage_type]
+                    if storage_type not in self.stats:
+                        self.stats[storage_type] = 0
+                    self.stats[storage_type] += worker_stats[storage_type]
 
-            return self.__class__.stats
+            return self.stats
 
         def exposed_get_stats(self) -> Dict[str, int]:
             """
             Returns total number of records in each connected storage.
             :return:        dictionary with stats
             """
-            return self.__class__.stats
+            return self.stats
 
         def exposed_write_record(self, record: Record, storage_type: str, update: bool = False):
             """
@@ -97,20 +92,21 @@ class ManagerService(rpyc.SlaveService):
             :param storage_type:    type of storage
             :param update:          is it an update of previous record or not
             """
-            #worker = self.workers[0]     # one local worker with storage
-            worker = self.__class__.workers_conn_pool[0].root.Worker()
             # Reassign record_id for a worker
+            worker = self.workers_conn_pool[0].root.Worker()
+
             if not update:
                 # TODO: in dfs should be mapped
-                record.set_index(self.__class__.stats[storage_type])
+                record.set_index(self.stats[storage_type])
             else:
                 pass
 
+            #for worker in self.workers_conn_pool.values():
             worker.write_record(record, storage_type, update=update)
 
             # if ok:
-            if record.idx == self.__class__.stats[storage_type]:
-                self.__class__.stats[storage_type] += 1
+            if record.idx == self.stats[storage_type]:
+                self.stats[storage_type] += 1
 
         def exposed_read_record(self, record_id: int, storage_type: str):
             """
@@ -119,8 +115,9 @@ class ManagerService(rpyc.SlaveService):
             :param storage_type     storage type
             :return:
             """
+
             #worker = self.workers[0]    # one local worker with storage
-            worker = self.__class__.workers_conn_pool[0].root.Worker()
+            worker = self.workers_conn_pool[0].root.Worker()
 
             try:
                 record = worker.read_record(record_id, storage_type)
@@ -130,9 +127,6 @@ class ManagerService(rpyc.SlaveService):
 
             return record
 
-        def close(self):
-            for worker in self.workers:
-                worker.close()
 
 
 def startManagerService(worker_ports=DEFAULT_WORKER_PORTS,
@@ -144,3 +138,4 @@ def startManagerService(worker_ports=DEFAULT_WORKER_PORTS,
 
     t = ThreadedServer(ManagerService, port=manager_port)
     t.start()
+

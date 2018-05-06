@@ -6,7 +6,7 @@ from .record import Record
 
 import rpyc
 from rpyc.utils.server import ThreadedServer
-from .conf import DEFAULT_MANAGER_PORTS, DEFAULT_WORKER_PORTS, LOG_DIR, base_config, base_path, worker_path
+from .conf import DEFAULT_MANAGER_PORTS, DEFAULT_WORKER_PORTS, base_config, base_path, worker_path
 import logging
 import os
 
@@ -24,22 +24,29 @@ class WorkerService(rpyc.SlaveService):
         def __init__(self):
             self.update_stats()
 
+        def exposed_flush(self):
+            self.stores['NodeStorage'].close()
+            self.stores['RelationshipStorage'].close()
+            self.stores['LabelStorage'].close()
+            self.stores['PropertyStorage'].close()
+            self.stores['DynamicStorage'].close()
+
         def update_stats(self) -> Dict[str, int]:
             """
             Updates total number of records in each connected storage.
             :return:        dictionary with stats
             """
-            self.__class__.stats = dict()
+            self.stats = dict()
             for storage_type in self.stores:
-                self.__class__.stats[storage_type] = self.__class__.stores[storage_type].count_records()
-            return self.__class__.stats
+                self.stats[storage_type] = self.stores[storage_type].count_records()
+            return self.stats
 
         def exposed_get_stats(self) -> Dict[str, int]:
             """
             Returns total number of records in each connected storage.
             :return:        dictionary with stats
             """
-            return self.__class__.stats
+            return self.stats
 
         def exposed_write_record(self, record: Record, storage_type: str, update: bool = False):
             """
@@ -80,18 +87,22 @@ class WorkerService(rpyc.SlaveService):
             for storage in self.stores:
                 self.stores[storage].close()
 
+
 def startWorkerService(server_port, worker_id):
 
     worker = WorkerService.exposed_Worker
 
     if base_config['NodeStorage']:
         worker.stores['NodeStorage'] = NodeStorage(path=base_path + worker_path + str(worker_id) + '/' + NODE_STORAGE)
+        print(worker.stores['NodeStorage'])
 
     if base_config['RelationshipStorage']:
         worker.stores['RelationshipStorage'] = RelationshipStorage(path=base_path + worker_path + str(worker_id) + '/'  + RELATIONSHIP_STORAGE)
 
     if base_config['LabelStorage']:
         worker.stores['LabelStorage'] = LabelStorage(path=base_path + worker_path + str(worker_id) + '/' + LABEL_STORAGE)
+        print(worker.stores['LabelStorage'])
+
 
     if base_config['PropertyStorage']:
         worker.stores['PropertyStorage'] = PropertyStorage(path=base_path + worker_path + str(worker_id) + '/' + PROPERTY_STORAGE)
