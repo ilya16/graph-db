@@ -25,11 +25,8 @@ class WorkerService(rpyc.SlaveService):
             self.update_stats()
 
         def exposed_flush(self):
-            self.stores['NodeStorage'].close()
-            self.stores['RelationshipStorage'].close()
-            self.stores['LabelStorage'].close()
-            self.stores['PropertyStorage'].close()
-            self.stores['DynamicStorage'].close()
+            for storage in self.stores:
+                self.stores[storage].close()
 
         def update_stats(self) -> Dict[str, int]:
             """
@@ -83,32 +80,27 @@ class WorkerService(rpyc.SlaveService):
 
             return record
 
-        def close(self):
-            for storage in self.stores:
-                self.stores[storage].close()
 
 
-def startWorkerService(server_port, worker_id):
+
+def start_worker_service(server_port, path):
 
     worker = WorkerService.exposed_Worker
 
     if base_config['NodeStorage']:
-        worker.stores['NodeStorage'] = NodeStorage(path=base_path + worker_path + str(worker_id) + '/' + NODE_STORAGE)
-        print(worker.stores['NodeStorage'])
+        worker.stores['NodeStorage'] = NodeStorage(path=path + NODE_STORAGE)
 
     if base_config['RelationshipStorage']:
-        worker.stores['RelationshipStorage'] = RelationshipStorage(path=base_path + worker_path + str(worker_id) + '/'  + RELATIONSHIP_STORAGE)
+        worker.stores['RelationshipStorage'] = RelationshipStorage(path=path + RELATIONSHIP_STORAGE)
 
     if base_config['LabelStorage']:
-        worker.stores['LabelStorage'] = LabelStorage(path=base_path + worker_path + str(worker_id) + '/' + LABEL_STORAGE)
-        print(worker.stores['LabelStorage'])
-
+        worker.stores['LabelStorage'] = LabelStorage(path=path + LABEL_STORAGE)
 
     if base_config['PropertyStorage']:
-        worker.stores['PropertyStorage'] = PropertyStorage(path=base_path + worker_path + str(worker_id) + '/' + PROPERTY_STORAGE)
+        worker.stores['PropertyStorage'] = PropertyStorage(path=path + PROPERTY_STORAGE)
 
     if base_config['DynamicStorage']:
-        worker.stores['DynamicStorage'] = DynamicStorage(path=base_path + worker_path + str(worker_id) + '/' + DYNAMIC_STORAGE)
+        worker.stores['DynamicStorage'] = DynamicStorage(path=path + DYNAMIC_STORAGE)
 
     t = ThreadedServer(WorkerService, port=server_port)
     t.start()

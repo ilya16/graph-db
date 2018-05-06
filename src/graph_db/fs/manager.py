@@ -7,11 +7,13 @@ from graph_db.fs.record import Record
 
 
 from threading import Thread
-from time import sleep
+from time import *
 
+from .worker import start_worker_service
+from multiprocessing import Process
 import rpyc
 from rpyc.utils.server import ThreadedServer
-from .conf import DEFAULT_MANAGER_PORTS, DEFAULT_WORKER_PORTS, base_path
+from .conf import *
 import logging
 import os
 
@@ -29,37 +31,66 @@ class ManagerService(rpyc.SlaveService):
         Acts as an abstraction above distributed file system.
         """
 
-        # Map file name to block_id
-        file_table = {} # {'file_name': [block_id1, block_id2, block_id3]}
+        workers = {}                    # {'worker_id': (host, port)}
+        worker_pool = {}                # {port : worker_process}
+        worker_replicas_pool = {}       # {worker_id : [replica_process, ...]}
+        worker_pool_size = 0
 
-        # Map block_id to where it's saved
-        block_mapping = {}  # {'block_id': [worker_id1, worker_id2, worker_id3]}
+        workers_conn_pool = {}          # {worker_id : connection}
+        worker_replicas_conn_pool = {}  # {worker_id : [connection, ...]}
 
-        # Map mid to what's saved on it
-        worker_content = {}  # {'worker_id': [block_id1, block_id2, block_id3]}
+        stores = {}                     # {TypeStorage : RecordStorage}
+        stats = {}                      # {TypeStorage : record_count}
 
-        # Register the information of every minion
-        workers = {}  # {'worker_id': (host, port)}
+        def __init__(self):
+            self.setup_workers()
 
-        workers_conn_pool = {}  # {'worker_id': connection}
+        def setup_workers(self):
+            for port in DEFAULT_WORKER_PORTS:
+                path = base_path + worker_path + str(self.worker_pool_size)+'/'
+                self.worker_pool[port] = Process(target=start_worker_service, args=(port, path))
+                self.worker_pool[port].start()
+                sleep(0.1)
+                self.workers_conn_pool[self.worker_pool_size] = rpyc.classic.connect('localhost', port)
+                print(f'Worker node #{self.worker_pool_size+1} created at localhost:{port}')
+                # If replicate mode is on - create replicas of workers
+                self.worker_replicas_conn_pool[self.worker_pool_size] = []
+                self.worker_replicas_pool[self.worker_pool_size] = []
+                if dfs_mode['Replicate'] is True:
+                    for i in range(1, REPLICATE_FACTOR + 1):
+                        path = base_path + worker_path +str(self.worker_pool_size)+'/'+replica_path+str(i)+'/'
+                        self.worker_replicas_pool[self.worker_pool_size].append(Process(target=start_worker_service, args=(port + i, path)))
+                        self.worker_replicas_pool[self.worker_pool_size][i-1].start()
+                        sleep(0.1)
+                        self.worker_replicas_conn_pool[self.worker_pool_size].append(rpyc.classic.connect('localhost', port+i))
 
-        manager_list = tuple()
+                        print(f'\tWorker replica #{i} has been created at localhost:{port+i}')
+                self.worker_pool_size = self.worker_pool_size + 1
+                if self.worker_pool_size == 1:
+                    break
 
-        stores = {}
+        def exposed_get_worker_processes(self):
+            processes = []
+            for p in self.worker_pool.keys():
+                processes.append(self.worker_pool[p])
+            for p in self.worker_replicas_pool.keys():
+                for id in range(len(self.worker_replicas_pool[p])):
+                    processes.append(self.worker_replicas_pool[p][id])
+            return processes
 
-        stats = {}
+        def exposed_close_workers(self):
+            for p in self.worker_replicas_pool.keys():
+                for id in range(len(self.worker_replicas_pool[p])):
+                    self.worker_replicas_pool[p][id].terminate()
+            for p in self.worker_pool.keys():
+                self.worker_pool[p].terminate()
 
-        def exposed_add_worker(self, host, port):
-            if not self.workers:
-                worker_id = 0
-            else:
-                worker_id = max(self.workers) + 1
-            self.workers[worker_id] = (host, port)
-            self.workers_conn_pool[worker_id] = rpyc.classic.connect(host, port)
 
         def exposed_flush_workers(self):
-            for worker in self.workers_conn_pool.values():
-                worker.root.Worker().flush()
+            for worker_id in self.workers_conn_pool.keys():
+                self.workers_conn_pool[worker_id].root.Worker().flush()
+                for replica in self.worker_replicas_conn_pool[worker_id]:
+                    replica.root.Worker().flush()
 
         def exposed_update_stats(self) -> Dict[str, int]:
             """
@@ -67,10 +98,8 @@ class ManagerService(rpyc.SlaveService):
             :return:        dictionary with stats
             """
             self.stats = dict()
-            for worker in self.workers.values():
-                host, port = worker
-                conn = rpyc.classic.connect(host, port)
-                worker_stats = conn.root.Worker().get_stats()
+            for worker in self.workers_conn_pool.values():
+                worker_stats = worker.root.Worker().get_stats()
                 for storage_type in worker_stats:
                     if storage_type not in self.stats:
                         self.stats[storage_type] = 0
@@ -93,7 +122,7 @@ class ManagerService(rpyc.SlaveService):
             :param update:          is it an update of previous record or not
             """
             # Reassign record_id for a worker
-            worker = self.workers_conn_pool[0].root.Worker()
+            # worker = self.workers_conn_pool[0].root.Worker()
 
             if not update:
                 # TODO: in dfs should be mapped
@@ -101,8 +130,10 @@ class ManagerService(rpyc.SlaveService):
             else:
                 pass
 
-            #for worker in self.workers_conn_pool.values():
-            worker.write_record(record, storage_type, update=update)
+            for worker_id in self.workers_conn_pool.keys():
+                self.workers_conn_pool[worker_id].root.Worker().write_record(record, storage_type, update=update)
+                for replica in self.worker_replicas_conn_pool[worker_id]:
+                    replica.root.Worker().write_record(record, storage_type, update=update)
 
             # if ok:
             if record.idx == self.stats[storage_type]:
@@ -116,7 +147,7 @@ class ManagerService(rpyc.SlaveService):
             :return:
             """
 
-            #worker = self.workers[0]    # one local worker with storage
+            # worker = self.workers[0]    # one local worker with storage
             worker = self.workers_conn_pool[0].root.Worker()
 
             try:
@@ -128,9 +159,7 @@ class ManagerService(rpyc.SlaveService):
             return record
 
 
-
-def startManagerService(worker_ports=DEFAULT_WORKER_PORTS,
-                        manager_port=DEFAULT_MANAGER_PORTS[0]):
+def start_manager_service(manager_port):
 
     manager = ManagerService.exposed_Manager
     # manager.block_size = block_size

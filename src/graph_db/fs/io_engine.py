@@ -15,9 +15,8 @@ import os
 
 from multiprocessing import Process
 import rpyc
-from .conf import DEFAULT_MANAGER_PORTS, DEFAULT_WORKER_PORTS
-from .manager import startManagerService
-from .worker import startWorkerService
+from .conf import *
+from .manager import start_manager_service
 import time
 import sys
 
@@ -32,51 +31,35 @@ class IOEngine:
     """
     def __init__(self, base_path: str = MEMORY):
 
-        self.worker_pool = {}
-        self.manager_pool = {2131: Process(target=startManagerService, args=([], 2131))}
-        self.manager_pool[2131].start()
-        time.sleep(0.1)
-        print('Manager node created at localhost: {}'.format(2131))
+        self.worker_pool = {}   # {port : worker_process}
+        self.manager_pool = {}  # {port : manager_process}
+        self.worker_replicas_pool = {}  # { worker_id : {port : worker_process}}
 
-        self.con = rpyc.classic.connect('localhost', 2131)
+        self.worker_pool_size = 0
+
+        # Setup Manager node
+        self.create_manager_node(DEFAULT_MANAGER_PORTS[0])
+        self.con = rpyc.classic.connect(DEFAULT_MANAGER_HOSTNAME, DEFAULT_MANAGER_PORTS[0])  # Connect to manager
         self.manager = self.con.root.Manager()
 
-        if not self.manager:
-            print('[Client] was not able to obtain connection to the cluster.')
-
-        self.setup_workers()
+        # Setup Worker nodes
         self.manager.update_stats()
-        #self.dbfs_manager = DBFSManager(base_path)
 
     # Incorporated DFS features
-
-    def create_worker_node(self, port = None):
-        if port in self.worker_pool:
-            print("gaga")
+    def create_manager_node(self, port = None):
+        if port in self.manager_pool:
             return
-        if not self.manager_pool:
-            return
-        if not port:
-            ports_in_use = self.worker_pool.keys()
-            port = DEFAULT_WORKER_PORTS[0]
-            while port in ports_in_use:
-                port = port + 1
-        self.worker_pool[port] = Process(target=startWorkerService, args=(port, len(self.worker_pool)))
-        self.worker_pool[port].start()
+        self.manager_pool[port] = Process(target=start_manager_service, args=(port, ))
+        self.manager_pool[port].start()
         time.sleep(0.1)
-        self.manager.add_worker('localhost', port)
-        print('Worker node created at localhost: {}'.format(port))
+        print(f'Manager UP at localhost:{port}')
 
-    def get_all_processes(self):
-        for p in self.worker_pool.keys():
-            yield self.worker_pool[p]
+    def get_processes(self):
+        processes = []
+        processes.append(self.manager.get_worker_processes())
         for p in self.manager_pool.keys():
-            yield self.manager_pool[p]
-
-    def setup_workers(self):
-        for port in DEFAULT_WORKER_PORTS:
-            self.create_worker_node(port)
-
+            processes.append(self.manager_pool[p])
+        return processes
 
     def print_processes(self, arg):
         print('Manager: ')
@@ -84,12 +67,14 @@ class IOEngine:
         print('\nWorkers: ')
         print(self.worker_pool)
 
-
     def close(self):
         self.manager.flush_workers()
-        for p in self.get_all_processes():
-            p.terminate()
-            print(p, 'terminated')
+        self.manager.close_workers()
+        self.manager_pool[2131].terminate()
+
+        # for p in self.get_processes():
+        #     p.terminate()
+        #     print(p, 'terminated')
 
     def get_stats(self) -> Dict[str, int]:
         """
