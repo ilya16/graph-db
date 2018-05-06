@@ -23,11 +23,12 @@ class IOEngineCase(TestCase):
         self.graph_engine = None
 
         # deleting created temp stores
-        for path in os.listdir(self.temp_dir):
-            for inner_path in os.listdir(os.path.join(self.temp_dir, path)):
-                os.remove(os.path.join(os.path.join(self.temp_dir, path), inner_path))
-            os.removedirs(os.path.join(self.temp_dir, path))
-        #os.removedirs(self.temp_dir)
+        for root, dirs, files in os.walk(self.temp_dir, topdown=False):
+            for name in files:
+                os.remove(os.path.join(root, name))
+            for name in dirs:
+                os.rmdir(os.path.join(root, name))
+        os.removedirs(self.temp_dir)
 
         with self.assertRaises(FileNotFoundError):
             os.listdir(self.temp_dir)
