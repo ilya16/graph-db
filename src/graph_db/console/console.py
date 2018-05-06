@@ -2,6 +2,8 @@ from graph_db.access import db
 import sys
 import readline
 
+from graph_db.engine.error import GraphEngineError
+
 HELP = """
 Query examples:
 create graph: label
@@ -52,7 +54,7 @@ class ConsoleReader:
                             self.cursor.execute(user_input)
                             result = self.cursor.fetch_one()
                             print(f"You have created graph called '{result.get_name()}' ")
-                        except SyntaxError as e:
+                        except (SyntaxError, GraphEngineError) as e:
                             print(e)
                     else:
                         if 'create graph' in user_input:
@@ -63,7 +65,7 @@ class ConsoleReader:
                             result = self.cursor.fetch_all()
                             for r in result:
                                 print(r)
-                        except SyntaxError as e:
+                        except (SyntaxError, GraphEngineError) as e:
                             print(e)
 
 

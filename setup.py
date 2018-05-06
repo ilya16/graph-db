@@ -22,4 +22,5 @@ setup(
             ['graphDB = graph_db.console.console:run']
     },
     test_suite='src.tests',
+    install_requires=['rpyc']
 )
