@@ -7,7 +7,7 @@ from graph_db.fs.io_engine import DYNAMIC_RECORD_PAYLOAD_SIZE
 
 
 class IOEngineCase(TestCase):
-    temp_dir = 'tmp/'
+    temp_dir = 'temp_db/'
 
     def setUp(self):
         self.graph_engine = GraphEngine(base_dir=self.temp_dir)

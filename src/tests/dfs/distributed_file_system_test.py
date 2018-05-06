@@ -12,7 +12,7 @@ class ParserCase(TestCase):
         self.io_engine = IOEngine()
 
     def tearDown(self):
-        self.io_engine.shut_down()
+        self.io_engine.close()
 
         # deleting created temp stores
         # for path in os.listdir(self.temp_dir):
