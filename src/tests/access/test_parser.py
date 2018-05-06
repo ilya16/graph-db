@@ -78,8 +78,11 @@ class ParserCase(TestCase):
         self.db.close()
 
         # deleting created temp stores
-        for path in os.listdir(self.temp_dir):
-            os.remove(os.path.join(self.temp_dir, path))
+        for root, dirs, files in os.walk(self.temp_dir, topdown=False):
+            for name in files:
+                os.remove(os.path.join(root, name))
+            for name in dirs:
+                os.rmdir(os.path.join(root, name))
         os.removedirs(self.temp_dir)
 
         with self.assertRaises(FileNotFoundError):
