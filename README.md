@@ -89,25 +89,28 @@ Welcome to Graph DB. (c) Ilya Borovik, Artur Khayaliev, Boris Makaev
 
 You can enter `/help` to see query examples.
 
+
 /help
 
-
+Query examples:
+create graph: label
+create node: label
+create node: label key:value
+create node: label key:value key:value key:value
+create relationship: label from label1 to label2
+create relationship: label from label1 to label2 key:value
+create relationship: label from id:0 to id:1 key:value
+...
 ```
 ## Built With
 
-* [Dropwizard](http://www.dropwizard.io/1.0.2/docs/) - The web framework used
-* [Maven](https://maven.apache.org/) - Dependency Management
-* [ROME](https://rometools.github.io/rome/) - Used to generate RSS Feeds
-
-## Contributing
-
-Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us.
+* [rpyc](https://github.com/tomerfiliba/rpyc) - Distributed File System used
 
 ## Authors
 
-* **Billie Thompson** - *Initial work* - [PurpleBooth](https://github.com/PurpleBooth)
-
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
+* **Ilya Borovik** - [ilya16](https://github.com/ilya16/)
+* **Artur Khayaliev** - [zytfo](https://github.com/zytfo)
+* **Boris Makaev** - [borisqa](https://github.com/Borisqa)
 
 ## License
 
@@ -115,6 +118,5 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Acknowledgments
 
-* Hat tip to anyone who's code was used
-* Inspiration
-* etc
+* Implementation of distributed file system was inspired by [PyDFS](https://github.com/iyidgnaw/PyDFS)
+* We also were inspired by [Neo4j Graph Platform](https://neo4j.com/)
