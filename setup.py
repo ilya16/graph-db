@@ -19,7 +19,7 @@ setup(
     package_dir={'graph_db': 'src/graph_db'},
     entry_points={
         'console_scripts':
-            ['graphDB = graph_db.console.console:run']
+            ['n4Graph = graph_db.console.console:run']
     },
     test_suite='src.tests',
     install_requires=['rpyc'],

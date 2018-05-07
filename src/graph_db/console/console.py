@@ -8,7 +8,7 @@ from graph_db.engine.error import GraphEngineError
 from graph_db.engine.types import DFS_CONFIG_PATH
 
 GREETING = """
-Welcome to Graph DB. (c) Ilya Borovik, Artur Khayaliev, Boris Makaev
+Welcome to not4oundGraph DB. (c) Ilya Borovik, Artur Khayaliev, Boris Makaev
 Use `help` to see query examples.
 Use `exit` to close database connection.
 """

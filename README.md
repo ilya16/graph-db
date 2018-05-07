@@ -1,6 +1,6 @@
-# Distributed Graph Database
+# not4oundGraph
 
-Distributed Graph Database Management System written on `Python` as the project in Advanced Databases course at Innopolis University.
+Simple Distributed Graph Database Management System written on `Python` as the project in Advanced Databases course at Innopolis University.
 
 ## Getting Started
 
@@ -78,11 +78,12 @@ Tests affect various layers of the Graph Database:
 
 To deploy ***Graph Database*** simply use
 ```
-graphDB [conf_path]
+n4Graph [conf_path]
 ```
 where `conf_path` stands for the path to configuration file that describes peers of distributed file system including managers and workers (slaves). 
 
-Configuration file has the following JSON format:
+### Distributed File System
+DFS configuration file has the following JSON format:
 
 ```
 {
@@ -114,15 +115,20 @@ Configuration file has the following JSON format:
 
 Without specifying any arguments, the default [configuration file](configs/config.json) with `replica_factor = 2` is used.
 
+***not4oundGraph*** supports two DFS modes:
+* **Replication** of data across multiple workers, each worker contains the same portion of data (example configuration file: [config.json](configs/config.json))
+* **Distribution** of data across multiple workers using Round-Robin algorithm (example configuration file: [config.json](configs/config_distributed.json))
+
 ### Graph Engine API
-We provide an [API](src/graph_db/engine/api.py) for managing graph database system directly from Python code.
+We provide an [API](src/graph_db/engine/api.py) for managing graph database system directly from Python code. Supported graph operations are listed in [specifications](SPECIFICATIONS.md).
 
 ### Data Access API (Query Language)
-We provide own simple graph query language (*SGQL*) for executing queries and a [wrapper](src/graph_db/access/db.py) around it.
+We provide own simple graph query language ***not4oundQL*** for executing queries and a [wrapper](src/graph_db/access/db.py) around it. 
+Language specification can found in ***not4oundGraph*** [specifications](SPECIFICATIONS.md).
 
-Executable file `graphDB` runs [console](src/graph_db/console/console.py) mode and accepts *SGQL* queries:
+Executable file `n4Graph` runs [console](src/graph_db/console/console.py) mode and accepts *not4oundQL* queries:
 ```
-Welcome to Graph DB. (c) Ilya Borovik, Artur Khayaliev, Boris Makaev
+Welcome to not4oundGraph DB. (c) Ilya Borovik, Artur Khayaliev, Boris Makaev
 
 You can enter `/help` to see query examples.
 
@@ -139,6 +145,8 @@ create relationship: label from label1 to label2 key:value
 create relationship: label from id:0 to id:1 key:value
 ...
 ```
+
+**Note:** *not4oundGraph* DB does not support `delete graph` queries. If you want to delete graph, please, delete the `db_path` directory with data that you have specified in configuration file.
 ## Built With
 
 * Python 3.6
