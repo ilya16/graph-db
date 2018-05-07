@@ -324,12 +324,6 @@ class IOEngine:
             processes.append(self.manager_pool[p])
         return processes
 
-    def print_processes(self, arg):
-        print('Manager: ')
-        print(self.manager_pool)
-        print('\nWorkers: ')
-        print(self.worker_pool)
-
     def close(self):
         """
         Closes file connections of all workers, then terminates all worker processes and finally terminates manager

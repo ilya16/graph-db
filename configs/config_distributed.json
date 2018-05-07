@@ -1,0 +1,36 @@
+{
+  "manager_config" : {
+    "ip": "localhost",
+    "port": 2131,
+    "db_path": "db/",
+    "workers": [
+      {
+        "ip": "localhost",
+        "port": 8888,
+        "stores": {
+          "NodeStorage": true,
+          "RelationshipStorage": true,
+          "LabelStorage": true,
+          "PropertyStorage": true,
+          "DynamicStorage": true
+        }
+      },
+      {
+        "ip": "localhost",
+        "port": 8889,
+        "stores": {
+          "NodeStorage": true,
+          "RelationshipStorage": true,
+          "LabelStorage": true,
+          "PropertyStorage": true,
+          "DynamicStorage": true
+        }
+      }
+    ],
+    "dfs_mode": {
+      "Replicate": false,
+      "Distribute": true
+    },
+    "replica_factor": 0
+  }
+}

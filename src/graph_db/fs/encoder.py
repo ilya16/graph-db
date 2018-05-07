@@ -183,7 +183,7 @@ class RecordEncoder:
             next_chunk_id = first_record_id + i + 1 if i < n_records - 1 else INVALID_ID
 
             record_bytes += RecordEncoder._encode_int(next_chunk_id)
-            records.append(Record(record_bytes, 0))
+            records.append(Record(record_bytes, first_record_id + i))
 
         assert all(r.size == DYNAMIC_RECORD_SIZE for r in records)
 

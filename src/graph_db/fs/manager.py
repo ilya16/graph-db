@@ -35,7 +35,7 @@ class ManagerService(rpyc.SlaveService):
         worker_pool_size = 0
 
         worker_stats = {}               # {worker_id : worker_stats={StorageType : count}}
-        mapper = {}                     # {global_id : {StorageType : {worker_id : local_id}}}
+        mapper = {}                     # {StorageType : {global_id : {worker_id : local_id}}}
 
         def __init__(self):
             self.setup_workers()
@@ -71,23 +71,20 @@ class ManagerService(rpyc.SlaveService):
             :param update:          is it an update of previous record or not
             """
             # Reassign record_id for a worker
-            # worker = self.workers_conn_pool[0].root.Worker()
-
-            if self.conf['dfs_mode']['Distribute']:
-                worker_id = self.simple_balance(storage_type)
-            else:
-                worker_id = 0
-
+            worker_id = 0
             if not update:
                 if self.conf['dfs_mode']['Distribute']:
-                    self.mapper[self.stats[storage_type]] = {}
-                    self.mapper[self.stats[storage_type]][storage_type] = (worker_id, self.worker_stats[worker_id][storage_type])
+                    worker_id = self.simple_balance(storage_type)
+                    if storage_type not in self.mapper:
+                        self.mapper[storage_type] = {}
+                    self.mapper[storage_type][record.idx] = (worker_id, self.worker_stats[worker_id][storage_type])
                     record.set_index(self.worker_stats[worker_id][storage_type])
                 else:
                     record.set_index(self.stats[storage_type])
             else:
                 if self.conf['dfs_mode']['Distribute']:
-                    record.set_index(self.mapper[self.stats[storage_type]-1][storage_type][1])
+                    worker_id = self.mapper[storage_type][record.idx][0]
+                    record.set_index(self.mapper[storage_type][record.idx][1])
 
             # print(f'Record {record.idx} to {storage_type} by  worker_{worker_id}')
             self.workers_conn_pool[worker_id].root.Worker().write_record(record, storage_type, update=update)
@@ -112,10 +109,14 @@ class ManagerService(rpyc.SlaveService):
             :return:
             """
 
-            # worker = self.workers[0]    # one local worker with storage
-            #worker = self.workers_conn_pool[0].root.Worker()
             if self.conf['dfs_mode']['Distribute']:
-                worker_id, local_record_id = self.mapper[record_id][storage_type]
+                try:
+                    worker_id, local_record_id = self.mapper[storage_type][record_id]
+                except KeyError:
+                    try:
+                        worker_id, local_record_id = self.mapper[storage_type][str(record_id)]
+                    except KeyError:
+                        return None
             else:
                 worker_id = 0
                 local_record_id = record_id
@@ -161,6 +162,15 @@ class ManagerService(rpyc.SlaveService):
                             rpyc.classic.connect('localhost', port + i))
 
                         print(f'\tWorker replica #{i} has been created at localhost:{port+i}')
+
+                if self.conf['dfs_mode']['Distribute']:
+                    try:
+                        with open(self.conf['db_path'] + 'mapper.db', "r") as f:
+                            j = json.load(f)
+                            self.worker_stats = j['worker_stats']
+                            self.mapper = j['mapper']
+                    except FileNotFoundError:
+                        pass
                 self.worker_pool_size = self.worker_pool_size + 1
 
         def exposed_get_worker_processes(self):
@@ -177,6 +187,11 @@ class ManagerService(rpyc.SlaveService):
                 for p in self.worker_replicas_pool.keys():
                     for id in range(len(self.worker_replicas_pool[p])):
                         self.worker_replicas_pool[p][id].terminate()
+            if self.conf['dfs_mode']['Distribute']:
+                with open(self.conf['db_path'] + 'mapper.db', "w") as f:
+                    json.dump({'worker_stats': self.worker_stats,
+                               'mapper': self.mapper},
+                              f)
             for p in self.worker_pool.keys():
                 self.worker_pool[p].terminate()
 

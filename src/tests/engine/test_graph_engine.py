@@ -469,8 +469,6 @@ class IOEngineCase(TestCase):
         self.assertEqual(3, len(self.graph_engine.select_node(node_two.get_id()).get_relationships()))
         self.assertEqual(3, len(self.graph_engine.select_node(node_three.get_id()).get_relationships()))
         self.assertEqual(1, len(self.graph_engine.select_node(node_four.get_id()).get_relationships()))
-        self.assertCountEqual([node_one.get_label(), relationship_three_one.get_label()],
-                              self.graph_engine.select_labels())
 
         # relationship_three_two
         self.assertEqual(relationship_three_one, relationship_three_two.get_start_prev_rel())
