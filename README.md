@@ -11,12 +11,7 @@ These instructions will get you a copy of the project up and running on your loc
 You have to clone our repository on your local machine
 
 ```
-git clone git@github.com:ilya16/graph-db.git
-```
-
-In order to use Distributed File System you have to install [rpyc](https://github.com/tomerfiliba/rpyc) in your local machine
-```
-pip install rpyc
+git clone https://github.com/ilya16/graph-db.git
 ```
 
 You should have also **Python 3.6** as your main interpreter
@@ -41,30 +36,63 @@ Using /anaconda3/lib/python3.6/site-packages
 Finished processing dependencies for Graph-DB==0.1
 ```
 
+We use [rpyc](https://github.com/tomerfiliba/rpyc) for distributing file system. It must be installed from ***setup.py***,
+but in case of any problems, try manual install
+
+```
+pip install rpyc
+```
+
+
 ## Running the tests
 
-To run tests 
-
-### Break down into end to end tests
-
-Explain what these tests test and why
-
+To run tests
 ```
-Give an example
+python setup.py test
 ```
 
-### And coding style tests
-
-Explain what these tests test and why
-
 ```
-Give an example
+...
+test_queries_invalid (src.tests.access.test_parser.ParserCase) ... ok
+test_cache_clear (src.tests.engine.test_graph_engine.IOEngineCase) ... ok
+test_deletions (src.tests.engine.test_graph_engine.IOEngineCase) ... ok
+test_nodes_and_labels (src.tests.engine.test_graph_engine.IOEngineCase) ... ok
+test_properties (src.tests.engine.test_graph_engine.IOEngineCase) ... ok
+test_relationships (src.tests.engine.test_graph_engine.IOEngineCase) ... ok
+test_simple_case (src.tests.engine.test_graph_engine.IOEngineCase) ... ok
+test_simple_case_from_disk (src.tests.engine.test_graph_engine.IOEngineCase) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.064s
 ```
+
+### Test explanation
+
+There are a lof of tests which tests our system in different aspects:
+* Valid/Invalid queries
+* Clearing the cache
+* Deletions
+* Nodes and labels
+* Properties
+* Relationships
+* Reading from disk
+* ...
 
 ## Deployment
 
-Add additional notes about how to deploy this on a live system
+To deploy ***Graph Database*** simply use
+```
+graphDB
+```
+```
+Welcome to Graph DB. (c) Ilya Borovik, Artur Khayaliev, Boris Makaev
 
+You can enter `/help` to see query examples.
+
+/help
+
+
+```
 ## Built With
 
 * [Dropwizard](http://www.dropwizard.io/1.0.2/docs/) - The web framework used
@@ -74,10 +102,6 @@ Add additional notes about how to deploy this on a live system
 ## Contributing
 
 Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us.
-
-## Versioning
-
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags). 
 
 ## Authors
 
