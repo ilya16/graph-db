@@ -155,3 +155,11 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+
+.DS_Store
+.idea/graph-db.iml
+.idea/misc.xml
+.idea/modules.xml
+src/.DS_Store
+src/tests/.DS_Store
+.idea/vcs.xml
