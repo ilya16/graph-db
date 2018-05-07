@@ -5,76 +5,40 @@ from graph_db.engine.node import Node
 from graph_db.engine.property import Property
 from graph_db.engine.relationship import Relationship
 from graph_db.engine.types import *
-#from .manager import DBFSManager
 from graph_db.fs.error import RecordNotFoundError
+
 from .decoder import RecordDecoder
 from .encoder import RecordEncoder
-#from .worker import Worker
-import logging
-import os
 
 from multiprocessing import Process
 import rpyc
-from .conf import *
 from .manager import start_manager_service
 import time
-import sys
+import json
 
-# TODO: distribution of data across different workers based on ids
+
 # TODO: connections with remote machines
-
-
 class IOEngine:
     """
     Graph Database IO Engine.
     Processes graph database queries on IO level.
     """
-    def __init__(self, base_path: str = MEMORY):
+    def __init__(self, config_path: str):
 
-        self.worker_pool = {}   # {port : worker_process}
+        self.config_path = config_path
+        self.manager_address = [(str, int)]
+
         self.manager_pool = {}  # {port : manager_process}
-        self.worker_replicas_pool = {}  # { worker_id : {port : worker_process}}
 
-        self.worker_pool_size = 0
+        self.parse_config(config_path)
 
-        # Setup Manager node
-        self.create_manager_node(DEFAULT_MANAGER_PORTS[0])
-        self.con = rpyc.classic.connect(DEFAULT_MANAGER_HOSTNAME, DEFAULT_MANAGER_PORTS[0])  # Connect to manager
+        # Setup manager node
+        self.create_manager_node(self.manager_address[0][1])
+        self.con = rpyc.classic.connect(self.manager_address[0][0], self.manager_address[0][1])  # Connect to manager
         self.manager = self.con.root.Manager()
 
-        # Setup Worker nodes
+        # Initialize managers statistics
         self.manager.update_stats()
-
-    # Incorporated DFS features
-    def create_manager_node(self, port = None):
-        if port in self.manager_pool:
-            return
-        self.manager_pool[port] = Process(target=start_manager_service, args=(port, ))
-        self.manager_pool[port].start()
-        time.sleep(0.1)
-        print(f'Manager UP at localhost:{port}')
-
-    def get_processes(self):
-        processes = []
-        processes.append(self.manager.get_worker_processes())
-        for p in self.manager_pool.keys():
-            processes.append(self.manager_pool[p])
-        return processes
-
-    def print_processes(self, arg):
-        print('Manager: ')
-        print(self.manager_pool)
-        print('\nWorkers: ')
-        print(self.worker_pool)
-
-    def close(self):
-        self.manager.flush_workers()
-        self.manager.close_workers()
-        self.manager_pool[2131].terminate()
-
-        # for p in self.get_processes():
-        #     p.terminate()
-        #     print(p, 'terminated')
 
     def get_stats(self) -> Dict[str, int]:
         """
@@ -336,3 +300,50 @@ class IOEngine:
                 pass
 
         return data
+
+    # DFS control methods
+
+    def create_manager_node(self, port=None):
+        """
+        Creates process bind to specific port, stores it in memory and starts it
+        :param port:
+        :return:
+        """
+        if port in self.manager_pool:
+            return
+        self.manager_pool[port] = Process(target=start_manager_service, args=(port, self.config_path))
+        self.manager_pool[port].start()
+        time.sleep(0.1)
+        print(f'Manager UP at localhost:{port}')
+
+    def get_processes(self):
+        """
+        Collect all processes: worker processes from manager and manager processes
+        :return:
+        """
+        processes = [self.manager.get_worker_processes()]
+        for p in self.manager_pool.keys():
+            processes.append(self.manager_pool[p])
+        return processes
+
+    def print_processes(self, arg):
+        print('Manager: ')
+        print(self.manager_pool)
+        print('\nWorkers: ')
+        print(self.worker_pool)
+
+    def close(self):
+        """
+        Closes file connections of all workers, then terminates all worker processes and finally terminates manager
+        process
+        :return:
+        """
+        self.manager.flush_workers()
+        self.manager.close_workers()
+        self.manager_pool[self.manager_address[0][1]].terminate()
+
+    def parse_config(self, config_path):
+        with open(config_path, "r") as f:
+            res = json.load(f)
+        self.manager_address = [(res['manager_config']['ip'], res['manager_config']['port'])]
+

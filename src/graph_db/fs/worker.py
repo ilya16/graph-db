@@ -6,7 +6,6 @@ from .record import Record
 
 import rpyc
 from rpyc.utils.server import ThreadedServer
-from .conf import DEFAULT_MANAGER_PORTS, DEFAULT_WORKER_PORTS, base_config, base_path, worker_path
 import logging
 import os
 
@@ -82,8 +81,7 @@ class WorkerService(rpyc.SlaveService):
 
 
 
-
-def start_worker_service(server_port, path):
+def start_worker_service(server_port, path, base_config):
 
     worker = WorkerService.exposed_Worker
 
