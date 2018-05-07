@@ -33,7 +33,7 @@ Best match: plumbum 1.6.6
 Adding plumbum 1.6.6 to easy-install.pth file
 
 Using /anaconda3/lib/python3.6/site-packages
-Finished processing dependencies for Graph-DB==0.1
+Finished processing dependencies for not4oundGraph-DB==0.1
 ```
 
 **Note:** We use [rpyc](https://github.com/tomerfiliba/rpyc) package for building distributing file system and communication between peers. It must be installed from ***setup.py***, but in case of any problems, please, manually run:
@@ -117,7 +117,7 @@ Without specifying any arguments, the default [configuration file](configs/confi
 
 ***not4oundGraph*** supports two DFS modes:
 * **Replication** of data across multiple workers, each worker contains the same portion of data (example configuration file: [config.json](configs/config.json))
-* **Distribution** of data across multiple workers using Round-Robin algorithm (example configuration file: [config.json](configs/config_distributed.json))
+* **Distribution** of data across multiple workers using Round-Robin algorithm (example configuration file: [config_distributed.json](configs/config_distributed.json))
 
 ### Graph Engine API
 We provide an [API](src/graph_db/engine/api.py) for managing graph database system directly from Python code. Supported graph operations are listed in [specifications](SPECIFICATIONS.md).
