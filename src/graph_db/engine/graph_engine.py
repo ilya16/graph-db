@@ -13,8 +13,8 @@ from graph_db.fs.io_engine import IOEngine
 
 
 class GraphEngine(EngineAPI):
-    def __init__(self, base_dir):
-        self.io_engine = IOEngine()
+    def __init__(self, conf_path = "../../../configs/config.json"):
+        self.io_engine = IOEngine(conf_path)
         #self.io_engine.add_worker(Worker(base_path=base_dir))
 
         # graph object

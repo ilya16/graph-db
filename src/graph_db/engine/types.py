@@ -46,3 +46,8 @@ LABEL_RECORD_SIZE = 5
 DYNAMIC_RECORD_SIZE = 32
 DYNAMIC_RECORD_PAYLOAD_SIZE = 27
 
+base_path = 'db/'
+worker_path = 'worker_instance_'
+replica_path = 'replica_'
+
+
