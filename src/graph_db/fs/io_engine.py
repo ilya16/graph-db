@@ -5,7 +5,7 @@ from graph_db.engine.node import Node
 from graph_db.engine.property import Property
 from graph_db.engine.relationship import Relationship
 from graph_db.engine.types import *
-from graph_db.fs.error import RecordNotFoundError
+from graph_db.engine.types import DFS_CONFIG_PATH
 
 from .decoder import RecordDecoder
 from .encoder import RecordEncoder
@@ -17,14 +17,12 @@ import time
 import json
 
 
-# TODO: connections with remote machines
 class IOEngine:
     """
     Graph Database IO Engine.
     Processes graph database queries on IO level.
     """
-    def __init__(self, config_path: str):
-
+    def __init__(self, config_path: str = DFS_CONFIG_PATH):
         self.config_path = config_path
         self.manager_address = [(str, int)]
 
@@ -82,11 +80,11 @@ class IOEngine:
         Collects all data from other stores.
         :return:
         """
-        try:
-            node_record = self.manager.read_record(node_id, 'NodeStorage')
+        node_record = self.manager.read_record(node_id, 'NodeStorage')
+        if node_record:
             return RecordDecoder.decode_node_record(node_record)
-        except RecordNotFoundError as e:
-            print(e)
+        else:
+            print(f'Node #{node_id} was not found')
             return dict()
 
     # Relationship
@@ -124,11 +122,11 @@ class IOEngine:
         Collects all data from other storages.
         :return:
         """
-        try:
-            relationship_record = self.manager.read_record(rel_id, 'RelationshipStorage')
+        relationship_record = self.manager.read_record(rel_id, 'RelationshipStorage')
+        if relationship_record:
             return RecordDecoder.decode_relationship_record(relationship_record)
-        except RecordNotFoundError as e:
-            print(e)
+        else:
+            print(f'Relationship #{rel_id} was not found')
             return dict()
 
     # Label
@@ -170,10 +168,9 @@ class IOEngine:
         :param label_id:
         :return:
         """
-        try:
-            label_record = self.manager.read_record(label_id, 'LabelStorage')
-        except RecordNotFoundError as e:
-            print(e)
+        label_record = self.manager.read_record(label_id, 'LabelStorage')
+        if label_record is None:
+            print(f'Label #{label_id} was not found')
             return dict()
 
         label_data = RecordDecoder.decode_label_record(label_record)
@@ -252,10 +249,9 @@ class IOEngine:
         :param prop_id:
         :return:
         """
-        try:
-            property_record = self.manager.read_record(prop_id, 'PropertyStorage')
-        except RecordNotFoundError as e:
-            print(e)
+        property_record = self.manager.read_record(prop_id, 'PropertyStorage')
+        if property_record is None:
+            print(f'Property #{prop_id} was not found')
             return dict()
 
         property_data = RecordDecoder.decode_property_record(property_record)
@@ -275,10 +271,9 @@ class IOEngine:
         data = ''
         while True:
             # read from dynamic storage until all data is collected
-            try:
-                dynamic_record = self.manager.read_record(dynamic_id, 'DynamicStorage')
-            except RecordNotFoundError as e:
-                print(e)
+            dynamic_record = self.manager.read_record(dynamic_id, 'DynamicStorage')
+            if dynamic_record is None:
+                print(f'Dynamic #{dynamic_id} was not found')
                 return None
             
             dynamic_data = RecordDecoder.decode_dynamic_data_record(dynamic_record)
@@ -343,7 +338,11 @@ class IOEngine:
         self.manager_pool[self.manager_address[0][1]].terminate()
 
     def parse_config(self, config_path):
-        with open(config_path, "r") as f:
-            res = json.load(f)
+        try:
+            with open(config_path, "r") as f:
+                res = json.load(f)
+        except FileNotFoundError:
+            with open('../../../' + config_path, "r") as f:
+                res = json.load(f)
         self.manager_address = [(res['manager_config']['ip'], res['manager_config']['port'])]
 

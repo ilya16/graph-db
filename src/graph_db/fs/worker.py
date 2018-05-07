@@ -74,11 +74,10 @@ class WorkerService(rpyc.SlaveService):
             try:
                 record = storage.read_record(record_id)
             except AssertionError as e:
-                print(f'Error: {e}')
-                raise e
+                # print(f'Error: {e}')
+                record = None
 
             return record
-
 
 
 def start_worker_service(server_port, path, base_config):

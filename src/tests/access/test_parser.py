@@ -4,10 +4,12 @@ import os
 from graph_db.access import db
 from graph_db.engine.api import EngineAPI
 from graph_db.engine.error import GraphEngineError
+from graph_db.engine.types import DFS_CONFIG_PATH
 
 
 class ParserCase(TestCase):
     temp_dir = 'db/'
+
     queries = [
         'create graph: test_graph',
         'create node: Cat',
@@ -70,7 +72,7 @@ class ParserCase(TestCase):
     ]
 
     def setUp(self):
-        self.db = db.connect('db/')
+        self.db = db.connect(config_path=DFS_CONFIG_PATH)
         self.cursor = self.db.cursor()
         self.graph_engine: EngineAPI = self.db.get_engine()
 

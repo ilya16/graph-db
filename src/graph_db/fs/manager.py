@@ -1,7 +1,6 @@
 from typing import Dict
 
 import graph_db.engine.types as types
-from graph_db.fs.error import RecordNotFoundError
 from graph_db.fs.record import Record
 
 from time import *
@@ -12,7 +11,6 @@ import rpyc
 from rpyc.utils.server import ThreadedServer
 import json
 
-# TODO: connections with remote machines
 
 class ManagerService(rpyc.SlaveService):
     class exposed_Manager(object):
@@ -123,11 +121,9 @@ class ManagerService(rpyc.SlaveService):
                 local_record_id = record_id
 
             worker = self.workers_conn_pool[worker_id].root.Worker()
-            try:
-                record = worker.read_record(local_record_id, storage_type)
-            except AssertionError as e:
-                print(f'Error at Worker #0: {e}')
-                raise RecordNotFoundError(f'Record with id:{record_id} was not found')
+            record = worker.read_record(local_record_id, storage_type)
+            # if record is None:
+                # print(f'Record #{record_id} was not found')
 
             return record
 
@@ -146,7 +142,7 @@ class ManagerService(rpyc.SlaveService):
             :return:
             """
             for port in self.worker_ports:
-                path = types.base_path + types.worker_path + str(self.worker_pool_size) + '/'
+                path = self.conf['db_path'] + types.WORKER_PATH + str(self.worker_pool_size) + '/'
                 self.worker_pool[port] = Process(target=start_worker_service, args=(port, path, self.conf['workers'][0]['stores']))
                 self.worker_pool[port].start()
                 sleep(0.1)
@@ -158,7 +154,7 @@ class ManagerService(rpyc.SlaveService):
                     self.worker_replicas_conn_pool[self.worker_pool_size] = []
                     self.worker_replicas_pool[self.worker_pool_size] = []
                     for i in range(1, self.conf['replica_factor'] + 1):
-                        path = types.base_path + types.worker_path + str(self.worker_pool_size) + '/' + types.replica_path + str(i) + '/'
+                        path = self.conf['db_path'] + types.WORKER_PATH + str(self.worker_pool_size) + '/' + types.REPLICA_PATH + str(i) + '/'
                         self.worker_replicas_pool[self.worker_pool_size].append(
                             Process(target=start_worker_service, args=(port + i, path, self.conf['workers'][0]['stores'])))
                         self.worker_replicas_pool[self.worker_pool_size][i - 1].start()
@@ -204,8 +200,12 @@ class ManagerService(rpyc.SlaveService):
 def start_manager_service(manager_port, config_path):
 
     manager = ManagerService.exposed_Manager
-    with open(config_path, "r") as f:
-        conf = json.load(f)
+    try:
+        with open(config_path, "r") as f:
+            conf = json.load(f)
+    except FileNotFoundError:
+        with open('../../../' + config_path, "r") as f:
+            conf = json.load(f)
 
     for worker in conf['manager_config']['workers']:
         manager.worker_ports.append(worker['port'])

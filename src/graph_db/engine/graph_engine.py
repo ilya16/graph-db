@@ -1,4 +1,4 @@
-from typing import Union, List, Dict, Callable, Optional, Tuple
+from typing import Union, List, Dict, Callable, Optional
 
 from graph_db.engine.api import EngineAPI
 from graph_db.engine.error import GraphEngineError
@@ -7,15 +7,13 @@ from graph_db.engine.label import Label
 from graph_db.engine.relationship import Relationship
 from graph_db.engine.node import Node
 from graph_db.engine.property import Property
-from graph_db.engine.types import INVALID_ID, DB_TYPE
+from graph_db.engine.types import INVALID_ID, DB_TYPE, DFS_CONFIG_PATH
 from graph_db.fs.io_engine import IOEngine
-#from graph_db.fs.worker import Worker
 
 
 class GraphEngine(EngineAPI):
-    def __init__(self, conf_path = "../../../configs/config.json"):
+    def __init__(self, conf_path: str = DFS_CONFIG_PATH):
         self.io_engine = IOEngine(conf_path)
-        #self.io_engine.add_worker(Worker(base_path=base_dir))
 
         # graph object
         self.graph = None

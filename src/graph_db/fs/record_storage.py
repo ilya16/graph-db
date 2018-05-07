@@ -43,7 +43,7 @@ class RecordStorage(metaclass=abc.ABCMeta):
         :return:                record object.
         :raise AssertionError:  if record does not exist.
         """
-        assert index < self.records, f'Record {index} does not exist'
+        assert index < self.records, f'Record #{index} does not exist'
 
         self.file.seek(index * self.record_size)
         return Record(self.file.read(self.record_size), index)
@@ -54,7 +54,7 @@ class RecordStorage(metaclass=abc.ABCMeta):
         :param record:          record object.
         :raise AssertionError:  if block does not exist.
         """
-        assert record.idx < self.records, f'Block {record.idx} does not exist'
+        assert record.idx < self.records, f'Record #{record.idx} does not exist'
 
         self.file.seek(record.idx * self.record_size)
         self.file.write(bytearray(record))

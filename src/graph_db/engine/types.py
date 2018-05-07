@@ -9,7 +9,9 @@ __all__ = [
     'SIGNED',
     'ENCODING',
     'INVALID_ID',
-    'MEMORY',
+    'DFS_CONFIG_PATH',
+    'WORKER_PATH',
+    'REPLICA_PATH',
     'NODE_STORAGE',
     'RELATIONSHIP_STORAGE',
     'PROPERTY_STORAGE',
@@ -30,8 +32,9 @@ SIGNED = True
 ENCODING = 'utf-8'
 INVALID_ID = -1
 
-MEMORY = 'memory:'
-DB_PATH = 'graph_db/'
+DFS_CONFIG_PATH = 'configs/config.json'
+WORKER_PATH = 'worker_instance_'
+REPLICA_PATH = 'replica_'
 
 NODE_STORAGE = 'node_storage.db'
 RELATIONSHIP_STORAGE = 'relationship_storage.db'
@@ -45,9 +48,5 @@ PROPERTY_RECORD_SIZE = 13
 LABEL_RECORD_SIZE = 5
 DYNAMIC_RECORD_SIZE = 32
 DYNAMIC_RECORD_PAYLOAD_SIZE = 27
-
-base_path = 'db/'
-worker_path = 'worker_instance_'
-replica_path = 'replica_'
 
 
