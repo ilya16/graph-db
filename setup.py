@@ -9,9 +9,9 @@ sys.path.append(path.join(path.dirname(__file__), 'src'))
 from graph_db import __version__ as version
 
 setup(
-    name='Graph DB',
+    name='not4oundGraph DB',
     version=version,
-    description='Simple Graph Database',
+    description='Simple Distributed Graph Database',
     long_description=open(path.join(path.dirname(__file__), 'README.md')).read(),
     author='ilya16, zyfto & Borisqa',
     url='https://github.com/ilya16/graph-db',
