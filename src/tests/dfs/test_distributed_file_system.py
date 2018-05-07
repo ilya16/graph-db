@@ -7,7 +7,7 @@ from graph_db.fs.io_engine import IOEngine
 
 
 class ParserCase(TestCase):
-    temp_dir = 'temp_db/'
+    temp_dir = 'db/'
     def setUp(self):
         self.io_engine = IOEngine()
 

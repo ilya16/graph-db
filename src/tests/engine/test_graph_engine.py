@@ -9,10 +9,10 @@ from graph_db.fs.io_engine import DYNAMIC_RECORD_PAYLOAD_SIZE
 
 
 class IOEngineCase(TestCase):
-    temp_dir = 'temp_db/'
+    temp_dir = 'db/'
 
     def setUp(self):
-        self.graph_engine: EngineAPI = GraphEngine(base_dir=self.temp_dir)
+        self.graph_engine: EngineAPI = GraphEngine()
         self.graph_engine.create_graph('test')
 
         self.assertDictEqual(dict(), self.graph_engine.get_graph().get_nodes())
@@ -269,7 +269,7 @@ class IOEngineCase(TestCase):
 
         # Close and reopen graph engine, so that in memory objects will be cleared
         self.graph_engine.close()
-        self.graph_engine = GraphEngine(base_dir=self.temp_dir)
+        self.graph_engine = GraphEngine()
 
         # Checking stats
         self.assertEqual(2, self.graph_engine.get_stats()['NodeStorage'], 'Storage has incorrect number of nodes')

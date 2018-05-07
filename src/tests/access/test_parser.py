@@ -7,7 +7,7 @@ from graph_db.engine.error import GraphEngineError
 
 
 class ParserCase(TestCase):
-    temp_dir = 'temp_db/'
+    temp_dir = 'db/'
     queries = [
         'create graph: test_graph',
         'create node: Cat',
@@ -70,7 +70,7 @@ class ParserCase(TestCase):
     ]
 
     def setUp(self):
-        self.db = db.connect('temp_db/')
+        self.db = db.connect('db/')
         self.cursor = self.db.cursor()
         self.graph_engine: EngineAPI = self.db.get_engine()
 
