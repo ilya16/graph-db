@@ -6,8 +6,6 @@ from .record import Record
 
 import rpyc
 from rpyc.utils.server import ThreadedServer
-import logging
-import os
 
 
 class WorkerService(rpyc.SlaveService):
@@ -73,8 +71,7 @@ class WorkerService(rpyc.SlaveService):
 
             try:
                 record = storage.read_record(record_id)
-            except AssertionError as e:
-                # print(f'Error: {e}')
+            except AssertionError:
                 record = None
 
             return record

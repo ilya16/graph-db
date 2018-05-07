@@ -292,7 +292,10 @@ class IOEngine:
             try:
                 data = int(data)
             except ValueError:
-                pass
+                try:
+                    data = float(data)
+                except ValueError:
+                    pass
 
         return data
 

@@ -122,8 +122,6 @@ class ManagerService(rpyc.SlaveService):
 
             worker = self.workers_conn_pool[worker_id].root.Worker()
             record = worker.read_record(local_record_id, storage_type)
-            # if record is None:
-                # print(f'Record #{record_id} was not found')
 
             return record
 
@@ -164,8 +162,6 @@ class ManagerService(rpyc.SlaveService):
 
                         print(f'\tWorker replica #{i} has been created at localhost:{port+i}')
                 self.worker_pool_size = self.worker_pool_size + 1
-                #if self.worker_pool_size == 1:
-                #    break
 
         def exposed_get_worker_processes(self):
             processes = []

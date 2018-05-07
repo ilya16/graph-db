@@ -14,15 +14,11 @@ class Cursor:
     def execute(self, query: str):
         try:
             func, params = self.parser.parse_query(query)
-            result = self.query_executor.execute(self.graph_engine, func, **params)
-            if isinstance(result, list):
-                self.result_set = ResultSet(result)
-            else:
-                self.result_set = ResultSet([result])
+            self.result_set = self.query_executor.execute(self.graph_engine, func, **params)
         except SyntaxError as e:
             raise e
 
-    def fetch_all(self):
+    def fetch_all(self) -> ResultSet:
         return self.result_set
 
     def fetch_one(self):

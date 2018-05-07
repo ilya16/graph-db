@@ -73,6 +73,7 @@ class ConsoleReader:
                         try:
                             self.cursor.execute(user_input)
                             result = self.cursor.fetch_all()
+                            print(f'Message: {result.get_message()}')
                             for r in result:
                                 print(r)
                         except (SyntaxError, GraphEngineError) as e:
@@ -86,7 +87,14 @@ def run():
     if not os.path.isfile(config_path) and not os.path.isfile('../../../' + config_path):
         print(f'Path `{config_path}` to DFS configuration file is incorrect')
         return
-    reader = ConsoleReader(config_path)
+
+    try:
+        reader = ConsoleReader(config_path)
+    except ConnectionError:
+        print('Error: Connection was not set up. Either configuration file, or database files are damaged.\n'
+              'Please, try again later.')
+        return
+
     reader.read_query()
 
 
