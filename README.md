@@ -30,11 +30,20 @@ cd graph-db/
 python setup.py install
 ```
 
-End with an example of getting some data out of the system or using it for a little demo
+```
+...
+Using /anaconda3/lib/python3.6/site-packages
+Searching for plumbum==1.6.6
+Best match: plumbum 1.6.6
+Adding plumbum 1.6.6 to easy-install.pth file
+
+Using /anaconda3/lib/python3.6/site-packages
+Finished processing dependencies for Graph-DB==0.1
+```
 
 ## Running the tests
 
-Explain how to run the automated tests for this system
+To run tests 
 
 ### Break down into end to end tests
 
