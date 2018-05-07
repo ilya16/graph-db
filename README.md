@@ -114,7 +114,7 @@ create relationship: label from id:0 to id:1 key:value
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
+This project is licensed under the MIT License - see the [LICENSE.md](https://github.com/ilya16/graph-db/blob/readme/LICENSE.md) file for details
 
 ## Acknowledgments
 
